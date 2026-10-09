@@ -60,6 +60,7 @@ function App() {
   const [activeView,        setActiveView]        = useState('dashboard')
   const [assignments,       setAssignments]       = useState([])
   const [assignmentsLoading,  setAssignmentsLoading] = useState(false)
+  const [assignmentsLoaded,   setAssignmentsLoaded]  = useState(false)
   const [assignmentsError,    setAssignmentsError]   = useState(null)
   const [crudError,          setCrudError]           = useState(null)
   const [settingsError,      setSettingsError]       = useState(null)
@@ -90,6 +91,7 @@ function App() {
     if (!sessionUserId) {
       setAssignments([])
       setAssignmentsLoading(false)
+      setAssignmentsLoaded(false)
       setAssignmentsError(null)
       setMigrationPending(false)
       setSettings({ ...DEFAULT_SETTINGS })
@@ -107,6 +109,7 @@ function App() {
         if (cancelled) return
         setAssignments(rows)
         setAssignmentsLoading(false)
+        setAssignmentsLoaded(true)
 
         // Migration detection: only prompt once per user account.
         // Check the raw key first so we don't trigger on the sampleData fallback.
@@ -272,6 +275,7 @@ function App() {
     reminders,
     enabled: settings.desktopNotificationsEnabled,
     sessionUserId,
+    assignmentsLoaded,
     onNavigate: setActiveView,
   })
 

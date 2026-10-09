@@ -44,20 +44,24 @@ function fire(type, assignment, onNavigate) {
 /**
  * Fires browser Notification API alerts for newly-detected reminders.
  *
- * Initial-load behaviour: the very first call that meets all conditions
- * seeds the sent-set without firing, so existing overdue/upcoming items
- * do not flood the user on sign-in.
+ * Initial-load behaviour: the very first qualifying run seeds the sent-set
+ * without firing, so existing assignments do not flood the user on sign-in.
+ * Crucially, seeding is deferred until `assignmentsLoaded` is true so the
+ * seed captures the actual cloud data rather than the empty array that
+ * exists while the initial fetchAssignments() call is in-flight. Without
+ * this guard, sessionUserId becoming non-null fires the effect before the
+ * fetch completes, seeds with [], then treats every loaded assignment as
+ * "new" — causing a flood and potentially throttling subsequent alerts.
  *
- * The sent-set and seeded flag are reset whenever `sessionUserId` changes
- * (sign-out or account switch), preventing cross-user notifications.
- *
- * `reminders`      — derived from deriveReminders(); recomputed on CRUD
- *                    changes and on the 5-minute notifTick from App.jsx.
- * `enabled`        — user's JARVIS-level toggle (settings.desktopNotificationsEnabled).
- * `sessionUserId`  — current auth user id; null when signed out.
- * `onNavigate`     — stable setActiveView ref; excluded from dep array.
+ * `reminders`         — derived from deriveReminders(); recomputed on CRUD
+ *                       changes and on the 5-minute notifTick from App.jsx.
+ * `enabled`           — user's JARVIS-level toggle (desktopNotificationsEnabled).
+ * `sessionUserId`     — current auth user id; null when signed out.
+ * `assignmentsLoaded` — true once the initial fetchAssignments() resolves;
+ *                       reset to false on sign-out to prevent stale seeds.
+ * `onNavigate`        — stable setActiveView ref; excluded from dep array.
  */
-export function useDesktopNotifications({ reminders, enabled, sessionUserId, onNavigate }) {
+export function useDesktopNotifications({ reminders, enabled, sessionUserId, assignmentsLoaded, onNavigate }) {
   const sentRef     = useRef(new Set())
   const seededRef   = useRef(false)
   const prevUserRef = useRef(null)
@@ -82,6 +86,10 @@ export function useDesktopNotifications({ reminders, enabled, sessionUserId, onN
 
     // ── First qualifying run: seed without firing ─────────────────────────
     if (!seededRef.current) {
+      // Wait until the initial cloud fetch has completed. Without this, the
+      // effect fires while assignments = [] (fetch in-flight), seeds nothing,
+      // then fires notifications for ALL loaded assignments on the next run.
+      if (!assignmentsLoaded) return
       for (const a of upcoming) sentRef.current.add(`upcoming:${a.id}`)
       for (const a of overdue)  sentRef.current.add(`overdue:${a.id}`)
       seededRef.current = true
@@ -107,5 +115,5 @@ export function useDesktopNotifications({ reminders, enabled, sessionUserId, onN
     }
     // onNavigate (= setActiveView) is a stable React dispatch ref — safe to
     // exclude from deps to avoid re-seeding when the function identity changes.
-  }, [reminders, enabled, sessionUserId])
+  }, [reminders, enabled, sessionUserId, assignmentsLoaded])
 }
