@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import NotificationBell from '../notifications/NotificationBell'
 import './TopBar.css'
 
-function TopBar({ title }) {
+function TopBar({ title, reminders, onNavigate }) {
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -29,6 +30,7 @@ function TopBar({ title }) {
       <div className="topbar-right">
         <span className="topbar-date">{formattedDate}</span>
         <span className="topbar-time">{formattedTime}</span>
+        <NotificationBell reminders={reminders} onNavigate={onNavigate} />
         <div className="system-indicator">
           <span className="indicator-dot" aria-hidden="true" />
           <span className="indicator-label">ONLINE</span>

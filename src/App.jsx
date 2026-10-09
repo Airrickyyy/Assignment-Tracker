@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Shell from './components/layout/Shell'
 import AuthScreen from './components/auth/AuthScreen'
@@ -15,6 +15,7 @@ import {
   deleteAssignment as repoDeleteAssignment,
   bulkInsertAssignments,
 } from './lib/assignmentsRepo'
+import { deriveReminders } from './lib/notifications'
 import { fetchPreferences, upsertPreferences } from './lib/preferencesRepo'
 import { loadAssignments, loadSettings, saveSettings, DEFAULT_SETTINGS } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
@@ -72,8 +73,9 @@ function App() {
 
   useEffect(() => { saveSettings(settings) }, [settings])
 
-  // ── Cloud assignment fetch on sign-in ────────────────────────────────────
+  // ── Derived state ────────────────────────────────────────────────────────
   const sessionUserId = session?.user?.id ?? null
+  const reminders = useMemo(() => deriveReminders(assignments), [assignments])
 
   useEffect(() => {
     if (!sessionUserId) {
@@ -317,6 +319,8 @@ function App() {
       setActiveView={setActiveView}
       onSignOut={signOut}
       banner={banner}
+      reminders={reminders}
+      onNavigate={setActiveView}
     >
       {views[activeView]}
     </Shell>
