@@ -71,6 +71,102 @@ function Toggle({ value, onChange }) {
   )
 }
 
+function DesktopNotifSection({ settings, updateSettings }) {
+  const supported = 'Notification' in window
+  const permission = supported ? Notification.permission : 'unsupported'
+
+  function requestPermission() {
+    Notification.requestPermission().then(() => {
+      // Force a re-render so the UI reflects the new permission state.
+      // We trigger it by toggling enabled on grant; otherwise just re-render via a no-op patch.
+      if (Notification.permission === 'granted') {
+        updateSettings({ desktopNotificationsEnabled: true })
+      } else {
+        updateSettings({})
+      }
+    })
+  }
+
+  function sendTest() {
+    if (!supported || Notification.permission !== 'granted') return
+    try {
+      const n = new Notification('JARVIS Test', {
+        body: 'Desktop notifications are working.',
+        icon: '/favicon.ico',
+        tag: 'jarvis-test',
+      })
+      setTimeout(() => n.close(), 4000)
+    } catch {
+      // restricted context
+    }
+  }
+
+  if (!supported) {
+    return (
+      <SettingsRow
+        label="Desktop Notifications"
+        description="Receive OS-level alerts for upcoming and overdue assignments."
+      >
+        <span className="notif-status-tag notif-status-tag--warn">Not supported</span>
+      </SettingsRow>
+    )
+  }
+
+  if (permission === 'denied') {
+    return (
+      <>
+        <SettingsRow
+          label="Desktop Notifications"
+          description="Receive OS-level alerts for upcoming and overdue assignments."
+        >
+          <span className="notif-status-tag notif-status-tag--error">Blocked</span>
+        </SettingsRow>
+        <p className="notif-hint">
+          Notifications are blocked. To unblock: click the lock icon in your browser address bar,
+          set Notifications to Allow, then reload JARVIS.
+        </p>
+      </>
+    )
+  }
+
+  if (permission === 'default') {
+    return (
+      <SettingsRow
+        label="Desktop Notifications"
+        description="Receive OS-level alerts for upcoming and overdue assignments."
+      >
+        <button className="btn-notif-request" onClick={requestPermission}>
+          Request Permission
+        </button>
+      </SettingsRow>
+    )
+  }
+
+  // permission === 'granted'
+  return (
+    <>
+      <SettingsRow
+        label="Desktop Notifications"
+        description="Receive OS-level alerts for upcoming and overdue assignments."
+      >
+        <div className="notif-granted-controls">
+          <span className="notif-status-tag notif-status-tag--ok">Allowed</span>
+          <Toggle
+            value={settings.desktopNotificationsEnabled}
+            onChange={val => updateSettings({ desktopNotificationsEnabled: val })}
+          />
+          <button className="btn-notif-test" onClick={sendTest}>
+            Test
+          </button>
+        </div>
+      </SettingsRow>
+      <p className="notif-hint">
+        Note: Windows Focus Assist / Do Not Disturb may suppress notifications even when allowed.
+      </p>
+    </>
+  )
+}
+
 function SettingsView({ settings, updateSettings }) {
   function reset() {
     updateSettings({ ...DEFAULT_SETTINGS })
@@ -119,6 +215,13 @@ function SettingsView({ settings, updateSettings }) {
             onChange={val => updateSettings({ overdueReminder: val })}
           />
         </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Notifications"
+        description="Control how JARVIS alerts you about deadlines."
+      >
+        <DesktopNotifSection settings={settings} updateSettings={updateSettings} />
       </SettingsSection>
 
       <SettingsSection

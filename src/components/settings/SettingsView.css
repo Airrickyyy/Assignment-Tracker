@@ -158,6 +158,78 @@
   color: var(--danger);
 }
 
+/* ── Desktop Notifications ──────────────────────────────────────── */
+.notif-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.notif-status-tag--ok {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+}
+
+.notif-status-tag--warn {
+  background: color-mix(in srgb, var(--priority-medium) 18%, transparent);
+  color: var(--priority-medium);
+}
+
+.notif-status-tag--error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.btn-notif-request {
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  transition: opacity 0.12s ease;
+}
+
+.btn-notif-request:hover {
+  opacity: 0.85;
+}
+
+.btn-notif-test {
+  padding: 5px 12px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.btn-notif-test:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notif-granted-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notif-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+  padding: 0 20px 12px;
+}
+
 /* ── Footer ─────────────────────────────────────────────────────── */
 .settings-footer {
   font-size: 11px;

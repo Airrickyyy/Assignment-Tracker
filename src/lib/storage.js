@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = {
   defaultPriority: 'medium',
   showCompletedOnDashboard: true,
   overdueReminder: 'banner',
+  desktopNotificationsEnabled: false,
 }
 
 function tryParse(raw) {

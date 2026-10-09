@@ -16,6 +16,7 @@ import {
   bulkInsertAssignments,
 } from './lib/assignmentsRepo'
 import { deriveReminders } from './lib/notifications'
+import { useDesktopNotifications } from './lib/useDesktopNotifications'
 import { fetchPreferences, upsertPreferences } from './lib/preferencesRepo'
 import { loadAssignments, loadSettings, saveSettings, DEFAULT_SETTINGS } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
@@ -75,7 +76,15 @@ function App() {
 
   // ── Derived state ────────────────────────────────────────────────────────
   const sessionUserId = session?.user?.id ?? null
-  const reminders = useMemo(() => deriveReminders(assignments), [assignments])
+
+  // notifTick increments every 5 minutes so reminders recompute at time boundaries
+  const [notifTick, setNotifTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setNotifTick(t => t + 1), 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const reminders = useMemo(() => deriveReminders(assignments), [assignments, notifTick])
 
   useEffect(() => {
     if (!sessionUserId) {
@@ -141,7 +150,7 @@ function App() {
       .then(prefs => {
         if (cancelled) return
         if (prefs) {
-          setSettings(prefs)
+          setSettings(prev => ({ ...prev, ...prefs }))
         } else {
           // New account — seed cloud row with defaults; don't change UI state.
           upsertPreferences(sessionUserId, DEFAULT_SETTINGS).catch(() => {})
@@ -257,6 +266,14 @@ function App() {
       prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t))
     )
   }
+
+  // ── Desktop notifications ────────────────────────────────────────────────
+  useDesktopNotifications({
+    reminders,
+    enabled: settings.desktopNotificationsEnabled,
+    sessionUserId,
+    onNavigate: setActiveView,
+  })
 
   // ── Routing ──────────────────────────────────────────────────────────────
   if (session === undefined) return null
