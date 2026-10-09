@@ -6,7 +6,16 @@ import Dashboard from './components/dashboard/Dashboard'
 import AssignmentsView from './components/assignments/AssignmentsView'
 import CalendarView from './components/calendar/CalendarView'
 import SettingsView from './components/settings/SettingsView'
-import { loadAssignments, saveAssignments, loadSettings, saveSettings } from './lib/storage'
+import MigrationBanner from './components/migration/MigrationBanner'
+import './components/migration/MigrationBanner.css'
+import {
+  fetchAssignments,
+  insertAssignment,
+  updateAssignment as repoUpdateAssignment,
+  deleteAssignment as repoDeleteAssignment,
+  bulkInsertAssignments,
+} from './lib/assignmentsRepo'
+import { loadAssignments, loadSettings, saveSettings } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
 
 function deriveStatus(dueDate, currentStatus) {
@@ -24,12 +33,10 @@ function App() {
   const [isRecovery, setIsRecovery] = useState(false)
 
   useEffect(() => {
-    // Resolve initial session from storage (nearly instant)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session ?? null)
     })
 
-    // Single subscription for the lifetime of the app
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true)
@@ -46,46 +53,149 @@ function App() {
     supabase.auth.signOut()
   }
 
-  // ── Planner state (localStorage — unchanged from Milestone 1) ────────────
-  const [activeView, setActiveView] = useState('dashboard')
-  const [assignments, setAssignments] = useState(() => loadAssignments())
-  const [schedule,    setSchedule]    = useState(sampleSchedule)
-  const [settings,    setSettings]    = useState(() => loadSettings())
+  // ── Planner state ────────────────────────────────────────────────────────
+  const [activeView,        setActiveView]        = useState('dashboard')
+  const [assignments,       setAssignments]       = useState([])
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false)
+  const [assignmentsError,   setAssignmentsError]   = useState(null)
+  const [crudError,          setCrudError]           = useState(null)
+  const [schedule,          setSchedule]          = useState(sampleSchedule)
+  const [settings,          setSettings]          = useState(() => loadSettings())
 
-  useEffect(() => { saveAssignments(assignments) }, [assignments])
-  useEffect(() => { saveSettings(settings) },       [settings])
+  // ── Migration state ──────────────────────────────────────────────────────
+  const [localAssignments,    setLocalAssignments]    = useState([])
+  const [migrationPending,    setMigrationPending]    = useState(false)
+  const [migrationInProgress, setMigrationInProgress] = useState(false)
+  const [migrationError,      setMigrationError]      = useState(null)
+
+  useEffect(() => { saveSettings(settings) }, [settings])
+
+  // ── Cloud assignment fetch on sign-in ────────────────────────────────────
+  const sessionUserId = session?.user?.id ?? null
+
+  useEffect(() => {
+    if (!sessionUserId) {
+      setAssignments([])
+      setAssignmentsLoading(false)
+      setAssignmentsError(null)
+      setMigrationPending(false)
+      return
+    }
+
+    let cancelled = false
+    setAssignmentsLoading(true)
+    setAssignmentsError(null)
+    setCrudError(null)
+
+    fetchAssignments()
+      .then(rows => {
+        if (cancelled) return
+        setAssignments(rows)
+        setAssignmentsLoading(false)
+
+        // Migration detection: only prompt once per user account.
+        // Check the raw key first so we don't migrate the sample-data fallback.
+        const marker = localStorage.getItem(`jarvis_migrated_${sessionUserId}`)
+        if (!marker) {
+          const rawLocal = localStorage.getItem('jarvis_assignments')
+          if (rawLocal) {
+            const local = loadAssignments()
+            if (local.length > 0) {
+              setLocalAssignments(local)
+              setMigrationPending(true)
+            } else {
+              localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
+            }
+          } else {
+            localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
+          }
+        }
+      })
+      .catch(err => {
+        if (cancelled) return
+        setAssignmentsError(err.message)
+        setAssignmentsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [sessionUserId])
+
+  // ── Migration handlers ───────────────────────────────────────────────────
+  async function handleMigrateLocal() {
+    setMigrationInProgress(true)
+    setMigrationError(null)
+    try {
+      await bulkInsertAssignments(sessionUserId, localAssignments)
+      localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
+      const fresh = await fetchAssignments()
+      setAssignments(fresh)
+      setMigrationPending(false)
+      setLocalAssignments([])
+    } catch (err) {
+      setMigrationError(err.message)
+    } finally {
+      setMigrationInProgress(false)
+    }
+  }
+
+  function handleDismissMigration() {
+    localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
+    setMigrationPending(false)
+    setLocalAssignments([])
+    setMigrationError(null)
+  }
 
   function updateSettings(patch) {
     setSettings(prev => ({ ...prev, ...patch }))
   }
 
-  function toggleAssignment(id) {
-    setAssignments(prev =>
-      prev.map(a => {
-        if (a.id !== id) return a
-        if (a.status === 'completed') return { ...a, status: deriveStatus(a.dueDate, 'pending') }
-        return { ...a, status: 'completed' }
-      })
-    )
+  // ── CRUD handlers (server-confirmed, no optimistic updates) ─────────────
+  async function toggleAssignment(id) {
+    setCrudError(null)
+    const existing = assignments.find(a => a.id === id)
+    if (!existing) return
+    const newStatus = existing.status === 'completed'
+      ? deriveStatus(existing.dueDate, 'pending')
+      : 'completed'
+    try {
+      const updated = await repoUpdateAssignment(id, { ...existing, status: newStatus })
+      setAssignments(prev => prev.map(a => a.id === id ? updated : a))
+    } catch (err) {
+      setCrudError(err.message)
+    }
   }
 
-  function addAssignment(data) {
+  async function addAssignment(data) {
+    setCrudError(null)
     const status = deriveStatus(data.dueDate, 'pending')
-    setAssignments(prev => [{ ...data, id: Date.now(), status }, ...prev])
+    try {
+      const created = await insertAssignment(sessionUserId, { ...data, status })
+      setAssignments(prev => [created, ...prev])
+    } catch (err) {
+      setCrudError(err.message)
+    }
   }
 
-  function updateAssignment(id, data) {
-    setAssignments(prev =>
-      prev.map(a => {
-        if (a.id !== id) return a
-        const status = deriveStatus(data.dueDate, a.status)
-        return { ...a, ...data, id, status }
-      })
-    )
+  async function updateAssignment(id, data) {
+    setCrudError(null)
+    const existing = assignments.find(a => a.id === id)
+    const status = deriveStatus(data.dueDate, existing?.status ?? 'pending')
+    try {
+      const updated = await repoUpdateAssignment(id, { ...data, status })
+      setAssignments(prev => prev.map(a => a.id === id ? updated : a))
+    } catch (err) {
+      setCrudError(err.message)
+    }
   }
 
-  function deleteAssignment(id) {
-    setAssignments(prev => prev.filter(a => a.id !== id))
+  async function deleteAssignment(id) {
+    setCrudError(null)
+    try {
+      await repoDeleteAssignment(id)
+      setAssignments(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      setCrudError(err.message)
+    }
   }
 
   function toggleTask(id) {
@@ -95,14 +205,23 @@ function App() {
   }
 
   // ── Routing ──────────────────────────────────────────────────────────────
-  if (session === undefined) {
-    // Session still resolving — render nothing to avoid flash
-    return null
-  }
+  if (session === undefined) return null
+  if (!session || isRecovery) return <AuthScreen isRecovery={isRecovery} />
 
-  if (!session || isRecovery) {
-    return <AuthScreen isRecovery={isRecovery} />
-  }
+  const banner = migrationPending ? (
+    <MigrationBanner
+      count={localAssignments.length}
+      inProgress={migrationInProgress}
+      error={migrationError}
+      onImport={handleMigrateLocal}
+      onDismiss={handleDismissMigration}
+    />
+  ) : crudError ? (
+    <div className="crud-error-banner" role="alert">
+      <span className="crud-error-banner-msg">{crudError}</span>
+      <button className="btn-banner-close" onClick={() => setCrudError(null)} aria-label="Dismiss error">×</button>
+    </div>
+  ) : null
 
   const views = {
     dashboard: (
@@ -130,7 +249,12 @@ function App() {
   }
 
   return (
-    <Shell activeView={activeView} setActiveView={setActiveView} onSignOut={signOut}>
+    <Shell
+      activeView={activeView}
+      setActiveView={setActiveView}
+      onSignOut={signOut}
+      banner={banner}
+    >
       {views[activeView]}
     </Shell>
   )

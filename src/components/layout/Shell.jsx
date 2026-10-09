@@ -9,12 +9,13 @@ const VIEW_TITLES = {
   settings: 'Settings',
 }
 
-function Shell({ activeView, setActiveView, onSignOut, children }) {
+function Shell({ activeView, setActiveView, onSignOut, children, banner }) {
   return (
     <div className="shell">
       <Sidebar activeView={activeView} setActiveView={setActiveView} onSignOut={onSignOut} />
       <div className="shell-main">
         <TopBar title={VIEW_TITLES[activeView]} />
+        {banner}
         <main className="shell-content">{children}</main>
       </div>
     </div>
