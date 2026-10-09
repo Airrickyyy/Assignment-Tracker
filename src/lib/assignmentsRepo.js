@@ -26,9 +26,10 @@ function toDbInsert(userId, data) {
     due_date:        data.dueDate,
     priority:        data.priority,
     status:          data.status,
-    points:          data.points          != null ? data.points          : null,
-    estimated_hours: data.estimatedHours  != null ? data.estimatedHours  : null,
-    description:     data.description     != null ? data.description     : null,
+    // points is INTEGER in DB — round defensively in case the UI sends a decimal.
+    points:          data.points          != null ? Math.round(data.points)   : null,
+    estimated_hours: data.estimatedHours  != null ? data.estimatedHours       : null,
+    description:     data.description     != null ? data.description          : null,
   }
 }
 
@@ -40,9 +41,9 @@ function toDbUpdate(data) {
     due_date:        data.dueDate,
     priority:        data.priority,
     status:          data.status,
-    points:          data.points          != null ? data.points          : null,
-    estimated_hours: data.estimatedHours  != null ? data.estimatedHours  : null,
-    description:     data.description     != null ? data.description     : null,
+    points:          data.points          != null ? Math.round(data.points)   : null,
+    estimated_hours: data.estimatedHours  != null ? data.estimatedHours       : null,
+    description:     data.description     != null ? data.description          : null,
     updated_at:      new Date().toISOString(),
   }
 }

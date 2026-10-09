@@ -56,8 +56,8 @@ function App() {
   // ── Planner state ────────────────────────────────────────────────────────
   const [activeView,        setActiveView]        = useState('dashboard')
   const [assignments,       setAssignments]       = useState([])
-  const [assignmentsLoading, setAssignmentsLoading] = useState(false)
-  const [assignmentsError,   setAssignmentsError]   = useState(null)
+  const [_assignmentsLoading, setAssignmentsLoading] = useState(false)
+  const [assignmentsError,    setAssignmentsError]   = useState(null)
   const [crudError,          setCrudError]           = useState(null)
   const [schedule,          setSchedule]          = useState(sampleSchedule)
   const [settings,          setSettings]          = useState(() => loadSettings())
@@ -94,14 +94,20 @@ function App() {
         setAssignmentsLoading(false)
 
         // Migration detection: only prompt once per user account.
-        // Check the raw key first so we don't migrate the sample-data fallback.
+        // Check the raw key first so we don't trigger on the sampleData fallback.
         const marker = localStorage.getItem(`jarvis_migrated_${sessionUserId}`)
         if (!marker) {
           const rawLocal = localStorage.getItem('jarvis_assignments')
           if (rawLocal) {
             const local = loadAssignments()
-            if (local.length > 0) {
-              setLocalAssignments(local)
+            // The old app auto-saved sampleAssignments (IDs 1–9) on first load.
+            // Filter those out so we don't migrate placeholder data.
+            // Real user assignments used Date.now() (13-digit) or UUIDs.
+            const userLocal = local.filter(
+              a => !(typeof a.id === 'number' && a.id >= 1 && a.id <= 9)
+            )
+            if (userLocal.length > 0) {
+              setLocalAssignments(userLocal)
               setMigrationPending(true)
             } else {
               localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
@@ -126,15 +132,24 @@ function App() {
     setMigrationError(null)
     try {
       await bulkInsertAssignments(sessionUserId, localAssignments)
-      localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
-      const fresh = await fetchAssignments()
-      setAssignments(fresh)
-      setMigrationPending(false)
-      setLocalAssignments([])
     } catch (err) {
       setMigrationError(err.message)
-    } finally {
       setMigrationInProgress(false)
+      return
+    }
+    // Insert confirmed — close the banner and mark complete before anything else.
+    // This must happen before the refetch so a refetch failure cannot leave the
+    // banner open with a Retry button that would re-run the insert.
+    localStorage.setItem(`jarvis_migrated_${sessionUserId}`, '1')
+    setMigrationPending(false)
+    setLocalAssignments([])
+    setMigrationInProgress(false)
+    // Best-effort refetch to show the newly migrated assignments immediately.
+    try {
+      const fresh = await fetchAssignments()
+      setAssignments(fresh)
+    } catch {
+      // Ignore — migration already succeeded. Data will appear on next sign-in.
     }
   }
 
@@ -216,6 +231,11 @@ function App() {
       onImport={handleMigrateLocal}
       onDismiss={handleDismissMigration}
     />
+  ) : assignmentsError ? (
+    <div className="crud-error-banner" role="alert">
+      <span className="crud-error-banner-msg">Could not load assignments: {assignmentsError}</span>
+      <button className="btn-banner-close" onClick={() => setAssignmentsError(null)} aria-label="Dismiss error">×</button>
+    </div>
   ) : crudError ? (
     <div className="crud-error-banner" role="alert">
       <span className="crud-error-banner-msg">{crudError}</span>
