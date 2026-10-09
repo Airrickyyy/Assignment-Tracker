@@ -42,7 +42,7 @@ const NAV_ITEMS = [
   },
 ]
 
-function Sidebar({ activeView, setActiveView }) {
+function Sidebar({ activeView, setActiveView, onSignOut }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -64,6 +64,12 @@ function Sidebar({ activeView, setActiveView }) {
       </nav>
 
       <div className="sidebar-footer">
+        <button className="btn-sign-out" onClick={onSignOut}>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" aria-hidden="true">
+            <path d="M13 15l4-5-4-5M17 10H7M7 3H4a1 1 0 00-1 1v12a1 1 0 001 1h3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Sign out
+        </button>
         <span className="build-tag">v1.0.0-alpha</span>
       </div>
     </aside>

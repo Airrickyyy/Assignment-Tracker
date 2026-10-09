@@ -72,3 +72,55 @@
 .priority-due.is-overdue {
   color: var(--danger);
 }
+
+/* ── Next Focus card ──────────────────────────────────────────────── */
+.priority-focus {
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-bright);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.priority-focus.priority-item--high    { border-left-color: var(--priority-high); }
+.priority-focus.priority-item--medium  { border-left-color: var(--priority-medium); }
+.priority-focus.priority-item--low     { border-left-color: var(--priority-low); }
+.priority-focus.priority-item--overdue {
+  border-left-color: var(--danger);
+  background: var(--danger-dim);
+}
+
+.focus-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.focus-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--accent-bright);
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+.priority-focus.priority-item--overdue .focus-label {
+  color: var(--danger);
+}
+
+.focus-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.focus-reason {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}

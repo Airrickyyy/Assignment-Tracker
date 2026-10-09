@@ -1,0 +1,168 @@
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 700px;
+}
+
+/* ── Section ────────────────────────────────────────────────────── */
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.settings-section-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.settings-section-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.settings-items {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Row ────────────────────────────────────────────────────────── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.settings-row-control {
+  flex-shrink: 0;
+}
+
+/* ── Segmented control ──────────────────────────────────────────── */
+.seg-control {
+  display: flex;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+.seg-option {
+  padding: 5px 13px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+
+.seg-option:hover {
+  color: var(--text-secondary);
+}
+
+.seg-option.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Priority-specific active colours */
+.seg-option.seg--low.active    { background: var(--priority-low); }
+.seg-option.seg--medium.active { background: var(--priority-medium); color: #111; }
+.seg-option.seg--high.active   { background: var(--priority-high); }
+
+/* ── Toggle ─────────────────────────────────────────────────────── */
+.toggle-btn {
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.toggle-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toggle-btn.active .toggle-knob {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+/* ── Reset button ───────────────────────────────────────────────── */
+.btn-settings-reset {
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.btn-settings-reset:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Footer ─────────────────────────────────────────────────────── */
+.settings-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 4px 4px 0;
+  line-height: 1.6;
+}

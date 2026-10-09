@@ -28,7 +28,7 @@ function DeleteIcon() {
   )
 }
 
-function AssignmentsView({ assignments, toggleAssignment, addAssignment, updateAssignment, deleteAssignment }) {
+function AssignmentsView({ assignments, toggleAssignment, addAssignment, updateAssignment, deleteAssignment, settings = {} }) {
   const [filter, setFilter] = useState('all')
   const [modalMode, setModalMode] = useState(null) // 'add' | 'edit'
   const [editingAssignment, setEditingAssignment] = useState(null)
@@ -178,6 +178,7 @@ function AssignmentsView({ assignments, toggleAssignment, addAssignment, updateA
           initial={editingAssignment}
           onSave={handleSave}
           onClose={closeModal}
+          defaultPriority={settings.defaultPriority ?? 'medium'}
         />
       )}
     </>

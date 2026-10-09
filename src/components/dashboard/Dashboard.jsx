@@ -4,13 +4,13 @@ import TodaySchedule from './TodaySchedule'
 import UpcomingDeadlines from './UpcomingDeadlines'
 import './Dashboard.css'
 
-function Dashboard({ assignments, schedule, toggleAssignment, toggleTask }) {
-  const today = new Date()
+function Dashboard({ assignments, schedule, toggleAssignment, toggleTask, settings = {}, onNavigate }) {
+  const today   = new Date()
   const weekEnd = new Date(today)
   weekEnd.setDate(today.getDate() + 7)
 
-  const pending = assignments.filter(a => a.status === 'pending').length
-  const overdue = assignments.filter(a => a.status === 'overdue').length
+  const pending   = assignments.filter(a => a.status === 'pending').length
+  const overdue   = assignments.filter(a => a.status === 'overdue').length
   const completed = assignments.filter(a => a.status === 'completed').length
   const dueThisWeek = assignments.filter(a => {
     if (a.status === 'completed') return false
@@ -18,13 +18,38 @@ function Dashboard({ assignments, schedule, toggleAssignment, toggleTask }) {
     return due >= today && due <= weekEnd
   }).length
 
+  const showCompleted = settings.showCompletedOnDashboard !== false
+
   return (
     <div className="dashboard">
+      {/* Overdue banner */}
+      {settings.overdueReminder === 'banner' && overdue > 0 && (
+        <div className="overdue-banner">
+          <div className="overdue-banner-left">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14" aria-hidden="true">
+              <path d="M10 3l7 14H3L10 3z" strokeLinejoin="round" />
+              <path d="M10 9v4M10 15v.5" strokeLinecap="round" />
+            </svg>
+            <span>
+              {overdue} overdue assignment{overdue !== 1 ? 's' : ''} need{overdue === 1 ? 's' : ''} attention
+            </span>
+          </div>
+          <button className="overdue-banner-btn" onClick={() => onNavigate?.('assignments')}>
+            View overdue
+          </button>
+        </div>
+      )}
+
       <div className="summary-row">
-        <SummaryCard label="Pending" value={pending} subtext="assignments" variant="default" />
-        <SummaryCard label="Due This Week" value={dueThisWeek} subtext="upcoming" variant="warning" />
-        <SummaryCard label="Overdue" value={overdue} subtext="need attention" variant="danger" />
-        <SummaryCard label="Completed" value={completed} subtext="this cycle" variant="success" />
+        <SummaryCard label="Pending"       value={pending}   subtext="assignments"  variant="default" />
+        <SummaryCard label="Due This Week" value={dueThisWeek} subtext="upcoming"  variant="warning" />
+        <SummaryCard label="Overdue"       value={overdue}   subtext="need attention" variant="danger" />
+        <SummaryCard
+          label="Completed"
+          value={showCompleted ? completed : '—'}
+          subtext="this cycle"
+          variant="success"
+        />
       </div>
 
       <PrioritySection assignments={assignments} onToggle={toggleAssignment} />

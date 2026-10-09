@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import './TodaySchedule.css'
 
 function parseMinutes(timeStr) {
@@ -6,7 +7,14 @@ function parseMinutes(timeStr) {
 }
 
 function TodaySchedule({ schedule, onToggle }) {
-  const now = new Date()
+  const [now, setNow] = useState(new Date())
+
+  // Update every minute so active/past classes track real time
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
+
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
   return (
@@ -15,9 +23,9 @@ function TodaySchedule({ schedule, onToggle }) {
       <ul className="schedule-list">
         {schedule.map((item, index) => {
           const start = parseMinutes(item.time)
-          const end = parseMinutes(item.endTime)
+          const end   = parseMinutes(item.endTime)
           const isActive = currentMinutes >= start && currentMinutes <= end
-          const isPast = currentMinutes > end || item.completed
+          const isPast   = currentMinutes > end || item.completed
 
           return (
             <li

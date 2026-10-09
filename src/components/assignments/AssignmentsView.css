@@ -90,7 +90,7 @@
 }
 
 .assignment-item:hover {
-  border-color: #2a3a56;
+  border-color: #8a6040;
 }
 
 .assignment-item.is-completed {
@@ -240,7 +240,7 @@
 }
 
 .btn-confirm-no:hover {
-  border-color: #2a3a56;
+  border-color: #8a6040;
 }
 
 /* ── Empty state row ────────────────────────────────────────────────── */

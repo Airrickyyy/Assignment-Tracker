@@ -37,15 +37,19 @@ function validate(form) {
   return errors
 }
 
-function AssignmentModal({ mode, initial, onSave, onClose }) {
+function AssignmentModal({ mode, initial, onSave, onClose, defaultPriority = 'medium' }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const firstInputRef = useRef(null)
 
   useEffect(() => {
-    setForm(mode === 'edit' && initial ? toFormValues(initial) : EMPTY_FORM)
+    if (mode === 'edit' && initial) {
+      setForm(toFormValues(initial))
+    } else {
+      setForm({ ...EMPTY_FORM, priority: defaultPriority })
+    }
     setErrors({})
-  }, [mode, initial])
+  }, [mode, initial, defaultPriority])
 
   useEffect(() => {
     firstInputRef.current?.focus()

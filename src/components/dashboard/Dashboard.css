@@ -26,3 +26,40 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Overdue banner ─────────────────────────────────────────────── */
+.overdue-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--danger-dim);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.overdue-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.overdue-banner-btn {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  transition: background 0.12s ease;
+  flex-shrink: 0;
+}
+
+.overdue-banner-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}

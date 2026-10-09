@@ -74,9 +74,34 @@
 }
 
 .sidebar-footer {
-  padding: 14px 20px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-sign-out {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  text-align: left;
+}
+
+.btn-sign-out:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
 }
 
 .build-tag {
@@ -84,4 +109,5 @@
   font-family: 'JetBrains Mono', 'Consolas', monospace;
   color: var(--text-muted);
   letter-spacing: 0.06em;
+  padding: 0 10px;
 }
