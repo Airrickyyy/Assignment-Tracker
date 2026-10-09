@@ -28,7 +28,7 @@ function DeleteIcon() {
   )
 }
 
-function AssignmentsView({ assignments, toggleAssignment, addAssignment, updateAssignment, deleteAssignment, settings = {} }) {
+function AssignmentsView({ assignments, assignmentsLoading = false, toggleAssignment, addAssignment, updateAssignment, deleteAssignment, settings = {} }) {
   const [filter, setFilter] = useState('all')
   const [modalMode, setModalMode] = useState(null) // 'add' | 'edit'
   const [editingAssignment, setEditingAssignment] = useState(null)
@@ -164,11 +164,19 @@ function AssignmentsView({ assignments, toggleAssignment, addAssignment, updateA
             </li>
           ))}
 
-          {sorted.length === 0 && (
+          {assignmentsLoading && assignments.length === 0 ? (
             <li className="empty-state-row">
-              <p className="empty-state">No assignments in this category.</p>
+              <p className="loading-state">Loading assignments…</p>
             </li>
-          )}
+          ) : sorted.length === 0 ? (
+            <li className="empty-state-row">
+              <p className="empty-state">
+                {assignments.length === 0
+                  ? 'No assignments yet. Add one to get started.'
+                  : 'No assignments in this category.'}
+              </p>
+            </li>
+          ) : null}
         </ul>
       </div>
 

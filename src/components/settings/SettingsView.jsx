@@ -136,8 +136,8 @@ function SettingsView({ settings, updateSettings }) {
       </SettingsSection>
 
       <p className="settings-footer">
-        Settings are saved automatically to local storage.
-        Assignment data persists across refreshes independently.
+        Settings are saved automatically to your account and synced across devices.
+        Assignment data is stored separately.
       </p>
     </div>
   )

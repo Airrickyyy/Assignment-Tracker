@@ -243,7 +243,18 @@
   border-color: #8a6040;
 }
 
-/* ── Empty state row ────────────────────────────────────────────────── */
+/* ── Empty / loading state rows ─────────────────────────────────────── */
 .empty-state-row {
   padding: 8px 0;
+}
+
+.empty-state,
+.loading-state {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+.loading-state {
+  font-style: italic;
 }

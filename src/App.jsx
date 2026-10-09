@@ -15,7 +15,8 @@ import {
   deleteAssignment as repoDeleteAssignment,
   bulkInsertAssignments,
 } from './lib/assignmentsRepo'
-import { loadAssignments, loadSettings, saveSettings } from './lib/storage'
+import { fetchPreferences, upsertPreferences } from './lib/preferencesRepo'
+import { loadAssignments, loadSettings, saveSettings, DEFAULT_SETTINGS } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
 
 function deriveStatus(dueDate, currentStatus) {
@@ -56,9 +57,10 @@ function App() {
   // ── Planner state ────────────────────────────────────────────────────────
   const [activeView,        setActiveView]        = useState('dashboard')
   const [assignments,       setAssignments]       = useState([])
-  const [_assignmentsLoading, setAssignmentsLoading] = useState(false)
+  const [assignmentsLoading,  setAssignmentsLoading] = useState(false)
   const [assignmentsError,    setAssignmentsError]   = useState(null)
   const [crudError,          setCrudError]           = useState(null)
+  const [settingsError,      setSettingsError]       = useState(null)
   const [schedule,          setSchedule]          = useState(sampleSchedule)
   const [settings,          setSettings]          = useState(() => loadSettings())
 
@@ -79,6 +81,8 @@ function App() {
       setAssignmentsLoading(false)
       setAssignmentsError(null)
       setMigrationPending(false)
+      setSettings({ ...DEFAULT_SETTINGS })
+      setSettingsError(null)
       return
     }
 
@@ -126,6 +130,28 @@ function App() {
     return () => { cancelled = true }
   }, [sessionUserId])
 
+  // ── Cloud preferences fetch on sign-in ──────────────────────────────────
+  useEffect(() => {
+    if (!sessionUserId) return
+    let cancelled = false
+    setSettingsError(null)
+    fetchPreferences()
+      .then(prefs => {
+        if (cancelled) return
+        if (prefs) {
+          setSettings(prefs)
+        } else {
+          // New account — seed cloud row with defaults; don't change UI state.
+          upsertPreferences(sessionUserId, DEFAULT_SETTINGS).catch(() => {})
+        }
+      })
+      .catch(err => {
+        if (cancelled) return
+        setSettingsError(`Could not load preferences: ${err.message}`)
+      })
+    return () => { cancelled = true }
+  }, [sessionUserId])
+
   // ── Migration handlers ───────────────────────────────────────────────────
   async function handleMigrateLocal() {
     setMigrationInProgress(true)
@@ -160,8 +186,19 @@ function App() {
     setMigrationError(null)
   }
 
-  function updateSettings(patch) {
-    setSettings(prev => ({ ...prev, ...patch }))
+  async function updateSettings(patch) {
+    let next
+    setSettings(prev => {
+      next = { ...prev, ...patch }
+      return next
+    })
+    if (!sessionUserId) return
+    try {
+      await upsertPreferences(sessionUserId, next)
+      setSettingsError(null)
+    } catch (err) {
+      setSettingsError(`Could not save preferences: ${err.message}`)
+    }
   }
 
   // ── CRUD handlers (server-confirmed, no optimistic updates) ─────────────
@@ -236,6 +273,11 @@ function App() {
       <span className="crud-error-banner-msg">Could not load assignments: {assignmentsError}</span>
       <button className="btn-banner-close" onClick={() => setAssignmentsError(null)} aria-label="Dismiss error">×</button>
     </div>
+  ) : settingsError ? (
+    <div className="crud-error-banner" role="alert">
+      <span className="crud-error-banner-msg">{settingsError}</span>
+      <button className="btn-banner-close" onClick={() => setSettingsError(null)} aria-label="Dismiss error">×</button>
+    </div>
   ) : crudError ? (
     <div className="crud-error-banner" role="alert">
       <span className="crud-error-banner-msg">{crudError}</span>
@@ -257,6 +299,7 @@ function App() {
     assignments: (
       <AssignmentsView
         assignments={assignments}
+        assignmentsLoading={assignmentsLoading}
         toggleAssignment={toggleAssignment}
         addAssignment={addAssignment}
         updateAssignment={updateAssignment}
