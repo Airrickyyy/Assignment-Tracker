@@ -1,0 +1,249 @@
+.assignments-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 900px;
+}
+
+.assignments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Add button ─────────────────────────────────────────────────────── */
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: background 0.12s ease;
+  flex-shrink: 0;
+}
+
+.btn-add:hover {
+  background: var(--accent-bright);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+.filter-tab {
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.filter-tab:hover {
+  color: var(--text-secondary);
+}
+
+.filter-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.assignments-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assignment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  transition: border-color 0.12s ease;
+}
+
+.assignment-item:hover {
+  border-color: #2a3a56;
+}
+
+.assignment-item.is-completed {
+  opacity: 0.55;
+}
+
+.assignment-check {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.assignment-priority-bar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.assignment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.assignment-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.assignment-item.is-completed .assignment-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.assignment-course {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+
+.assignment-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.assignment-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.assignment-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.assignment-status-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.status--pending   { color: var(--accent-bright); background: var(--accent-glow); }
+.status--overdue   { color: var(--danger);         background: var(--danger-dim); }
+.status--completed { color: var(--success);        background: var(--success-dim); }
+
+/* ── Card action buttons ────────────────────────────────────────────── */
+.assignment-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.btn-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.btn-icon:hover {
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+}
+
+.btn-icon--delete:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+
+/* ── Inline delete confirmation ─────────────────────────────────────── */
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.delete-confirm-label {
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.btn-confirm-yes {
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--danger);
+  color: #fff;
+  transition: opacity 0.12s ease;
+}
+
+.btn-confirm-yes:hover {
+  opacity: 0.85;
+}
+
+.btn-confirm-no {
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  transition: border-color 0.12s ease;
+}
+
+.btn-confirm-no:hover {
+  border-color: #2a3a56;
+}
+
+/* ── Empty state row ────────────────────────────────────────────────── */
+.empty-state-row {
+  padding: 8px 0;
+}

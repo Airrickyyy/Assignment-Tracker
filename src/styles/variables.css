@@ -1,0 +1,44 @@
+:root {
+  /* Backgrounds */
+  --bg: #080c14;
+  --surface: #0c1220;
+  --surface-alt: #0f172a;
+  --card: #111827;
+  --card-hover: #162033;
+
+  /* Borders */
+  --border: #1e2d45;
+  --border-subtle: #172035;
+
+  /* Accent */
+  --accent: #2563eb;
+  --accent-bright: #3b82f6;
+  --accent-dim: #1d4ed8;
+  --accent-glow: rgba(59, 130, 246, 0.1);
+  --accent-glow-strong: rgba(59, 130, 246, 0.2);
+
+  /* Text */
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+
+  /* Status */
+  --success: #10b981;
+  --success-dim: rgba(16, 185, 129, 0.1);
+  --warning: #f59e0b;
+  --warning-dim: rgba(245, 158, 11, 0.1);
+  --danger: #ef4444;
+  --danger-dim: rgba(239, 68, 68, 0.1);
+
+  /* Priority */
+  --priority-high: #ef4444;
+  --priority-medium: #f59e0b;
+  --priority-low: #10b981;
+
+  /* Layout */
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-sm: 4px;
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+}

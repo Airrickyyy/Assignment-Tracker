@@ -1,0 +1,138 @@
+.schedule-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  position: relative;
+}
+
+.schedule-item.past .schedule-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.schedule-item.active .schedule-content {
+  opacity: 1;
+}
+
+.schedule-item.active .schedule-title {
+  color: var(--accent-bright);
+}
+
+.schedule-time {
+  width: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.schedule-time-start {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  letter-spacing: 0.04em;
+}
+
+.schedule-time-end {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+.schedule-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 18px;
+  flex-shrink: 0;
+  position: relative;
+  align-self: stretch;
+}
+
+.schedule-bar-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background: var(--border);
+}
+
+.schedule-list li:first-child .schedule-bar-track {
+  top: 50%;
+}
+
+.schedule-list li:last-child .schedule-bar-track {
+  bottom: 50%;
+}
+
+.schedule-bar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  z-index: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  flex-shrink: 0;
+}
+
+.dot--class {
+  background: var(--accent-bright);
+}
+
+.dot--task {
+  background: var(--border);
+  border: 1.5px solid var(--text-muted);
+}
+
+.dot--active {
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.dot--class.dot--active {
+  box-shadow: 0 0 0 3px var(--accent-glow-strong);
+}
+
+.schedule-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.schedule-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  transition: color 0.12s ease;
+}
+
+.schedule-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.schedule-check {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
