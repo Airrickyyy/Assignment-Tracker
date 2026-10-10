@@ -94,7 +94,12 @@ function App() {
       setAssignmentsLoaded(false)
       setAssignmentsError(null)
       setMigrationPending(false)
-      setSettings({ ...DEFAULT_SETTINGS })
+      // desktopNotificationsEnabled is a browser-level preference — it must
+      // survive sign-out/sign-in and page refreshes. Preserve it when resetting
+      // the rest of settings to defaults. (The sign-out branch runs on every
+      // initial mount while session is undefined, which would otherwise write
+      // desktopNotificationsEnabled:false to localStorage on every page load.)
+      setSettings(prev => ({ ...DEFAULT_SETTINGS, desktopNotificationsEnabled: prev.desktopNotificationsEnabled }))
       setSettingsError(null)
       return
     }
@@ -110,6 +115,8 @@ function App() {
         setAssignments(rows)
         setAssignmentsLoading(false)
         setAssignmentsLoaded(true)
+        // DEV DIAGNOSTIC — remove before production
+        console.log(`[JARVIS notif] assignmentsLoaded=true rows=${rows.length}`)
 
         // Migration detection: only prompt once per user account.
         // Check the raw key first so we don't trigger on the sampleData fallback.

@@ -21,12 +21,15 @@ function fire(type, assignment, onNavigate) {
       ? `Was due ${formatDate(assignment.dueDate)}`
       : `Due ${formatDate(assignment.dueDate)}`,
   ].filter(Boolean).join(' · ')
+  const tag = `jarvis-${type}-${assignment.id}`
+  // DEV DIAGNOSTIC — remove before production
+  console.log(`[JARVIS notif] new Notification type=${type} id=...${String(assignment.id).slice(-8)} tag=${tag}`)
   try {
     const n = new Notification(title, {
       body,
       icon: '/favicon.ico',
       // tag deduplicates at the OS level — one notification per assignment per type
-      tag: `jarvis-${type}-${assignment.id}`,
+      tag,
       requireInteraction: false,
     })
     n.onclick = () => {
@@ -34,8 +37,9 @@ function fire(type, assignment, onNavigate) {
       onNavigate?.('assignments')
       n.close()
     }
-  } catch {
-    // Notification constructor can throw in some restricted contexts; ignore.
+  } catch (err) {
+    // DEV DIAGNOSTIC — remove before production
+    console.warn('[JARVIS notif] Notification() threw:', err)
   }
 }
 
@@ -74,13 +78,28 @@ export function useDesktopNotifications({ reminders, enabled, sessionUserId, ass
       prevUserRef.current = sessionUserId
     }
 
+    const uid = sessionUserId ? ('...' + sessionUserId.slice(-6)) : 'null'
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
+    // DEV DIAGNOSTIC — remove before production
+    console.log(`[JARVIS notif] effect uid=${uid} enabled=${enabled} loaded=${assignmentsLoaded} perm=${perm} seeded=${seededRef.current}`)
+
     // ── Guard: all conditions must be met ─────────────────────────────────
-    if (
-      !sessionUserId ||
-      !enabled ||
-      !('Notification' in window) ||
-      Notification.permission !== 'granted'
-    ) return
+    if (!sessionUserId) {
+      console.log('[JARVIS notif] skip: no-session')
+      return
+    }
+    if (!enabled) {
+      console.log('[JARVIS notif] skip: disabled')
+      return
+    }
+    if (!('Notification' in window)) {
+      console.log('[JARVIS notif] skip: api-unavailable')
+      return
+    }
+    if (Notification.permission !== 'granted') {
+      console.log(`[JARVIS notif] skip: perm=${Notification.permission}`)
+      return
+    }
 
     const { upcoming = [], overdue = [] } = reminders
 
@@ -89,7 +108,11 @@ export function useDesktopNotifications({ reminders, enabled, sessionUserId, ass
       // Wait until the initial cloud fetch has completed. Without this, the
       // effect fires while assignments = [] (fetch in-flight), seeds nothing,
       // then fires notifications for ALL loaded assignments on the next run.
-      if (!assignmentsLoaded) return
+      if (!assignmentsLoaded) {
+        console.log('[JARVIS notif] skip: waiting for hydration')
+        return
+      }
+      console.log(`[JARVIS notif] SEED upcoming=${upcoming.length} overdue=${overdue.length}`)
       for (const a of upcoming) sentRef.current.add(`upcoming:${a.id}`)
       for (const a of overdue)  sentRef.current.add(`overdue:${a.id}`)
       seededRef.current = true
@@ -99,16 +122,21 @@ export function useDesktopNotifications({ reminders, enabled, sessionUserId, ass
     // ── Subsequent runs: notify for newly-entered items only ──────────────
     // Overdue checked first so an assignment that crosses midnight gets an
     // overdue alert even if it was already seeded as upcoming.
+    console.log(`[JARVIS notif] FIRE-SCAN upcoming=${upcoming.length} overdue=${overdue.length}`)
     for (const a of overdue) {
       const key = `overdue:${a.id}`
-      if (!sentRef.current.has(key)) {
+      const isDup = sentRef.current.has(key)
+      console.log(`[JARVIS notif] overdue:...${String(a.id).slice(-8)} → ${isDup ? 'DUP' : 'NEW'}`)
+      if (!isDup) {
         sentRef.current.add(key)
         fire('overdue', a, onNavigate)
       }
     }
     for (const a of upcoming) {
       const key = `upcoming:${a.id}`
-      if (!sentRef.current.has(key)) {
+      const isDup = sentRef.current.has(key)
+      console.log(`[JARVIS notif] upcoming:...${String(a.id).slice(-8)} → ${isDup ? 'DUP' : 'NEW'}`)
+      if (!isDup) {
         sentRef.current.add(key)
         fire('upcoming', a, onNavigate)
       }

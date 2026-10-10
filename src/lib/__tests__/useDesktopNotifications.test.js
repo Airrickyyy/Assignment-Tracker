@@ -1,5 +1,6 @@
 /**
- * Focused tests for the seeding/trigger logic in useDesktopNotifications.
+ * Focused tests for the seeding/trigger logic in useDesktopNotifications,
+ * plus deriveReminders date classification.
  *
  * Key invariants verified:
  * 1. No notification fires for assignments present at initial load (seed-without-fire).
@@ -7,11 +8,15 @@
  * 3. The same assignment never fires twice in a session (deduplication).
  * 4. Nothing fires while assignmentsLoaded=false (hydration guard).
  * 5. Refs reset on user change (account isolation).
+ * 6. Seeding happens correctly when enabled flips from false→true after load.
+ * 7. deriveReminders classifies "due tomorrow" as upcoming (real date logic).
+ * 8. Full pipeline: deriveReminders output → hook fires for new assignment.
  */
 
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useDesktopNotifications } from '../useDesktopNotifications'
+import { deriveReminders } from '../notifications'
 
 // ── Fake Notification API ─────────────────────────────────────────────────────
 
@@ -235,5 +240,142 @@ describe('useDesktopNotifications', () => {
 
     rerender({ reminders: makeReminders(['a1']), enabled: false, sessionUserId: 'user1', assignmentsLoaded: true, onNavigate: vi.fn() })
     expect(FakeNotification.instances).toHaveLength(0)
+  })
+
+  it('seeds with loaded data when enabled flips true after load — no flood, new assignment fires', () => {
+    // This is the "user enables notifications after page has already loaded" path,
+    // which is also what happens every page-load if desktopNotificationsEnabled was
+    // persisted in localStorage as true but then reset by the sign-out effect.
+    const { rerender } = renderHook(
+      (props) => useDesktopNotifications(props),
+      {
+        initialProps: {
+          reminders: makeReminders(['existing1', 'existing2']),
+          enabled: false,
+          sessionUserId: 'user1',
+          assignmentsLoaded: true,
+          onNavigate: vi.fn(),
+        },
+      }
+    )
+
+    // enabled=false — guard returns early, nothing seeded yet
+    expect(FakeNotification.instances).toHaveLength(0)
+
+    // User enables notifications (or preference is restored after sign-out reset fix)
+    rerender({
+      reminders: makeReminders(['existing1', 'existing2']),
+      enabled: true,
+      sessionUserId: 'user1',
+      assignmentsLoaded: true,
+      onNavigate: vi.fn(),
+    })
+    // Seed runs: existing assignments added to sentRef, no notification fires
+    expect(FakeNotification.instances).toHaveLength(0)
+
+    // User creates a new assignment
+    rerender({
+      reminders: makeReminders(['existing1', 'existing2', 'newAssignment']),
+      enabled: true,
+      sessionUserId: 'user1',
+      assignmentsLoaded: true,
+      onNavigate: vi.fn(),
+    })
+    expect(FakeNotification.instances).toHaveLength(1)
+    expect(FakeNotification.instances[0].title).toContain('newAssignment')
+  })
+})
+
+// ── deriveReminders date classification ───────────────────────────────────────
+
+function localDateStr(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+describe('deriveReminders', () => {
+  it('classifies a pending assignment due tomorrow as upcoming', () => {
+    const tomorrow = localDateStr(new Date(Date.now() + 24 * 60 * 60 * 1000))
+    const a = { id: 'uuid-tomorrow', title: 'Test', dueDate: tomorrow, status: 'pending' }
+    const { upcoming, overdue } = deriveReminders([a])
+    expect(upcoming).toHaveLength(1)
+    expect(upcoming[0].id).toBe('uuid-tomorrow')
+    expect(overdue).toHaveLength(0)
+  })
+
+  it('classifies a pending assignment due yesterday as overdue', () => {
+    const yesterday = localDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000))
+    const a = { id: 'uuid-yesterday', title: 'Test', dueDate: yesterday, status: 'pending' }
+    const { upcoming, overdue } = deriveReminders([a])
+    expect(overdue).toHaveLength(1)
+    expect(overdue[0].id).toBe('uuid-yesterday')
+    expect(upcoming).toHaveLength(0)
+  })
+
+  it('excludes completed assignments', () => {
+    const tomorrow = localDateStr(new Date(Date.now() + 24 * 60 * 60 * 1000))
+    const a = { id: 'uuid-done', title: 'Test', dueDate: tomorrow, status: 'completed' }
+    const { upcoming, overdue, total } = deriveReminders([a])
+    expect(upcoming).toHaveLength(0)
+    expect(overdue).toHaveLength(0)
+    expect(total).toBe(0)
+  })
+
+  it('excludes assignments due more than 48 hours away', () => {
+    const farFuture = localDateStr(new Date(Date.now() + 4 * 24 * 60 * 60 * 1000))
+    const a = { id: 'uuid-future', title: 'Test', dueDate: farFuture, status: 'pending' }
+    const { upcoming, overdue } = deriveReminders([a])
+    expect(upcoming).toHaveLength(0)
+    expect(overdue).toHaveLength(0)
+  })
+})
+
+// ── Integration: deriveReminders → hook pipeline ──────────────────────────────
+
+describe('deriveReminders → useDesktopNotifications integration', () => {
+  beforeEach(() => {
+    installFakeNotification()
+  })
+
+  it('fires for a new "due tomorrow" assignment using real deriveReminders output', () => {
+    const tomorrow = localDateStr(new Date(Date.now() + 24 * 60 * 60 * 1000))
+
+    const existingAssignment = { id: 'existing-uuid-1', title: 'Existing', dueDate: tomorrow, status: 'pending' }
+    const newAssignment      = { id: 'new-uuid-2',      title: 'New Task', dueDate: tomorrow, status: 'pending' }
+
+    const seedReminders = deriveReminders([existingAssignment])
+    const afterReminders = deriveReminders([existingAssignment, newAssignment])
+
+    const { rerender } = renderHook(
+      (props) => useDesktopNotifications(props),
+      {
+        initialProps: {
+          reminders: seedReminders,
+          enabled: true,
+          sessionUserId: 'user1',
+          assignmentsLoaded: true,
+          onNavigate: vi.fn(),
+        },
+      }
+    )
+
+    // Initial seed: existing assignment added to sentRef, no notification
+    expect(FakeNotification.instances).toHaveLength(0)
+
+    // New assignment added
+    act(() => {
+      rerender({
+        reminders: afterReminders,
+        enabled: true,
+        sessionUserId: 'user1',
+        assignmentsLoaded: true,
+        onNavigate: vi.fn(),
+      })
+    })
+
+    expect(FakeNotification.instances).toHaveLength(1)
+    expect(FakeNotification.instances[0].title).toBe('Due soon: New Task')
   })
 })
