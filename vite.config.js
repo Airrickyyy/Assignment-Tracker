@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: [],
+    pool: 'vmThreads',
   },
 })

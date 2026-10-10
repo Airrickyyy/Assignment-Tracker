@@ -115,8 +115,6 @@ function App() {
         setAssignments(rows)
         setAssignmentsLoading(false)
         setAssignmentsLoaded(true)
-        // DEV DIAGNOSTIC — remove before production
-        console.log(`[JARVIS notif] assignmentsLoaded=true rows=${rows.length}`)
 
         // Migration detection: only prompt once per user account.
         // Check the raw key first so we don't trigger on the sampleData fallback.
