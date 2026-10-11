@@ -92,7 +92,7 @@ function DesktopNotifSection({ settings, updateSettings }) {
     try {
       const n = new Notification('JARVIS Test', {
         body: 'Desktop notifications are working.',
-        icon: '/favicon.ico',
+        icon: '/favicon.svg',
         tag: 'jarvis-test',
       })
       setTimeout(() => n.close(), 4000)
@@ -150,7 +150,9 @@ function DesktopNotifSection({ settings, updateSettings }) {
         description="Receive OS-level alerts for upcoming and overdue assignments."
       >
         <div className="notif-granted-controls">
-          <span className="notif-status-tag notif-status-tag--ok">Allowed</span>
+          {settings.desktopNotificationsEnabled
+            ? <span className="notif-status-tag notif-status-tag--ok">Allowed</span>
+            : <span className="notif-status-tag notif-status-tag--off">Disabled</span>}
           <Toggle
             value={settings.desktopNotificationsEnabled}
             onChange={val => updateSettings({ desktopNotificationsEnabled: val })}

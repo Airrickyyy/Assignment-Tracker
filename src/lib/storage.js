@@ -48,8 +48,19 @@ export function saveAssignments(assignments) {
 export function loadSettings() {
   const raw = localStorage.getItem(KEYS.settings)
   const parsed = tryParse(raw)
-  if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_SETTINGS }
-  return { ...DEFAULT_SETTINGS, ...parsed }
+  const stored = (parsed && typeof parsed === 'object') ? parsed : {}
+  const settings = { ...DEFAULT_SETTINGS, ...stored }
+  // If browser permission is already granted but the user never explicitly
+  // set the in-app toggle (key absent from localStorage), default it to on.
+  // Permission IS consent — the toggle should reflect that.
+  if (
+    !('desktopNotificationsEnabled' in stored) &&
+    typeof Notification !== 'undefined' &&
+    Notification.permission === 'granted'
+  ) {
+    settings.desktopNotificationsEnabled = true
+  }
+  return settings
 }
 
 export function saveSettings(settings) {

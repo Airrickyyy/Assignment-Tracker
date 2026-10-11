@@ -175,6 +175,11 @@
   color: var(--success);
 }
 
+.notif-status-tag--off {
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+  color: var(--text-muted);
+}
+
 .notif-status-tag--warn {
   background: color-mix(in srgb, var(--priority-medium) 18%, transparent);
   color: var(--priority-medium);

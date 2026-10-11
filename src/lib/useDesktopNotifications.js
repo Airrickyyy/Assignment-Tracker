@@ -25,7 +25,7 @@ function fire(type, assignment, onNavigate) {
   try {
     const n = new Notification(title, {
       body,
-      icon: '/favicon.ico',
+      icon: '/favicon.svg',
       // tag deduplicates at the OS level — one notification per assignment per type
       tag,
       requireInteraction: false,

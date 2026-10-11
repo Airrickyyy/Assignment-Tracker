@@ -102,7 +102,7 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
   - `src/components/settings/SettingsView.jsx` — 4 permission states (unsupported/denied/default/granted), toggle, test button.
   - `src/lib/__tests__/useDesktopNotifications.test.js` — 12 tests covering all key invariants.
 - **Verified (automated):** 12/12 tests pass, lint clean, build clean (2026-10-10). Diagnostic logs removed.
-- **Verified (manual):** NOT YET — needs real Windows browser test.
+- **Verified (manual):** 2026-10-10 — new assignment due tomorrow fired a Windows notification once the in-app toggle was on. Root cause of the earlier "no notification" reports: the toggle had been stored as `false` (old sign-out bug) while the status tag still said "Allowed". The tag now reads "Disabled" when the toggle is off. Click → Assignments navigation and refresh/sign-out persistence not yet explicitly confirmed.
 - **Outstanding:**
   - **Required:** On Windows in a real browser, enable notifications, grant permission, create a new pending assignment due tomorrow → notification must appear. Click it → must navigate to assignments view.
   - Preference must survive refresh and sign-out/sign-in.
@@ -175,4 +175,5 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 | Date | What was done | Verified? | Next |
 |------|---------------|-----------|------|
+| 2026-10-10 (late) | Diagnosed 3B: toggle stored `false`. `loadSettings()` auto-enables when permission is granted and no preference is stored; status tag shows Disabled/Allowed based on the toggle; notification icon → `favicon.svg`; diagnostic logs removed. Manual test: notification fired. Note: three stale dev servers were running on ports 5173–5175 (each a separate origin with its own settings). | Manual (firing) + automated | Confirm click navigation + persistence; RLS audit; Phase 4 scoping |
 | 2026-10-10 | Roadmap and CLAUDE.md created. Repo inspected: all commits present (`d5351be`, `aa24c1e`, `2081076`, `6f3a625`). Vitest pool changed to `vmThreads` for Windows stability. Diagnostic console.logs removed. 12/12 tests pass, lint clean, build clean. | Automated only | Manual Phase 3B browser test |
