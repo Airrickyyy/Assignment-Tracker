@@ -40,11 +40,19 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 **Goal:** Supabase backend, database and schema, foundation for persistent user data.
 
-- **Status:** Implemented (unverified)
-- **Implemented:** `src/lib/supabaseClient.js`, `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` env vars. Schema and RLS policies exist in the project's Supabase dashboard (not in repo).
-- **Verified:** Client initializes; auth calls succeed (evidenced by auth working).
-- **Outstanding:** RLS policies not audited in this session.
-- **Next step:** Audit RLS policies once other phases are stable.
+- **Status:** Verified (RLS audit 2026-10-12)
+- **Implemented:** `src/lib/supabaseClient.js`, `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` env vars. Schema, RLS and grants in `supabase/migrations/001`–`004` (run manually in SQL Editor).
+- **Verified:** Client initializes; auth calls succeed.
+- **RLS audit (2026-10-12), live database:**
+  - RLS enabled on all 4 public tables (`assignments`, `user_preferences`, `push_subscriptions`, `push_reminders_sent`); no public views.
+  - `assignments`, `user_preferences`: select/insert/update/delete restricted to `auth.uid() = user_id` (insert/update also WITH CHECK).
+  - `push_subscriptions`: select/delete own rows; writes only via `register_push_subscription()` (SECURITY DEFINER, execute granted to `authenticated` only).
+  - `push_reminders_sent`: no policies, no user grants → service role only.
+  - `anon`: no table privileges at all. `authenticated`: only DELETE/INSERT/SELECT/UPDATE (push_subscriptions: DELETE/SELECT).
+  - **Fixed:** `anon`/`authenticated` held TRUNCATE/TRIGGER/REFERENCES on every table (Supabase defaults; TRUNCATE bypasses RLS) → revoked in `004_revoke_unused_privileges.sql`.
+  - `rls_auto_enable()` (not in repo) is Supabase's event trigger `ensure_rls` on `ddl_command_end` — auto-enables RLS on new tables; not callable directly. Keep.
+- **Outstanding:** Re-run the audit when adding tables (query in session log 2026-10-12 / ask Claude).
+- **Next step:** —
 
 ### 2B — Authentication
 
@@ -139,7 +147,8 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 - **Deployed (2026-10-12):** migrations 002 + 003 run; secrets set; `send-reminders` deployed (`--no-verify-jwt`); pg_cron job `jarvis-send-reminders` (id 1) every 15 min. Smoke test: no secret → 401; with secret → 200.
 - **Verified (manual, 2026-10-12):** JARVIS tab closed, browser running → triggered run returned `{"users":1,"sent":1}` and the Windows notification appeared (user-confirmed).
 - **Outstanding:**
-  - Not yet explicitly checked: click → opens Assignments; toggle off / sign-out removes the `push_subscriptions` row; a second run doesn't repeat the push; the scheduled (unattended) cron run.
+  - Verified 2026-10-12: a second run doesn't repeat the push (`sent: 0`).
+  - Not yet explicitly checked: click → opens Assignments; toggle off / sign-out removes the `push_subscriptions` row; the scheduled (unattended) cron run.
   - Known gap: if a reminder's push lands while a JARVIS tab is visible, the service worker suppresses it but the server still marks it sent. Reminders for assignments created in-tab are covered by the in-tab hook; ones already in the window when the tab loaded only show in the in-app bell.
   - Browser fully closed is not covered (push TTL 6h) — that's Phase 5.
 - **Next step:** Run the remaining checks opportunistically; move on to the RLS audit.
@@ -208,16 +217,16 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 ## Immediate priority
 
-1. RLS policy audit (2A outstanding) — now also covers `push_subscriptions` / `push_reminders_sent`.
-2. Phase 5A Quick Panel (in-app) — confirm overlay vs. Dashboard, then build. Independent of Phase 4.
-3. Phase 4 (AI assistant) scoping.
-4. Remaining 3C spot-checks (see 3C Outstanding).
+1. Phase 5A Quick Panel (in-app) — confirm overlay vs. Dashboard, then build. Independent of Phase 4.
+2. Phase 4 (AI assistant) scoping.
+3. Remaining 3C spot-checks (see 3C Outstanding).
 
 ## Session log
 
 | Date | What was done | Verified? | Next |
 |------|---------------|-----------|------|
 | 2026-10-12 | 3B marked verified (user-confirmed). Built and deployed Phase 3C Web Push (incl. migration 003 grants fix): migration 002, `send-reminders` Edge Function, shared selection logic, service worker, subscription hook, Settings status row, key setup script, setup doc. VAPID keys generated locally. | Automated (37/37, lint, build) + manual: background push delivered with tab closed | RLS audit, then Phase 4 |
+| 2026-10-12 | RLS audit of live DB: all tables RLS-on and owner-scoped; revoked unused TRUNCATE/TRIGGER/REFERENCES from anon/authenticated (migration 004). 3C dedup confirmed (second run sent 0). | Manual (SQL audit) | Phase 5A Quick Panel |
 | 2026-10-12 | Planned Phase 5A Quick Panel from user's desktop-dashboard screenshots; split Phase 5 into 5A (in-app panel) and 5B (Windows app + overlay). | — | Decide overlay vs. Dashboard |
 | 2026-10-10 (late) | Diagnosed 3B: toggle stored `false`. `loadSettings()` auto-enables when permission is granted and no preference is stored; status tag shows Disabled/Allowed based on the toggle; notification icon → `favicon.svg`; diagnostic logs removed. Manual test: notification fired. Note: three stale dev servers were running on ports 5173–5175 (each a separate origin with its own settings). | Manual (firing) + automated | Confirm click navigation + persistence; RLS audit; Phase 4 scoping |
 | 2026-10-10 | Roadmap and CLAUDE.md created. Repo inspected: all commits present (`d5351be`, `aa24c1e`, `2081076`, `6f3a625`). Vitest pool changed to `vmThreads` for Windows stability. Diagnostic console.logs removed. 12/12 tests pass, lint clean, build clean. | Automated only | Manual Phase 3B browser test |
