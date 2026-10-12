@@ -95,7 +95,7 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 **Goal:** Permission requested appropriately; enable/disable toggle; detect new assignments needing reminders; notify for upcoming/overdue; don't fire for assignments existing at load; dedupe; handle user change, completion, permission denial, unavailable API; click navigates to the relevant view.
 
-- **Status:** Implemented — automated checks passing, browser test outstanding
+- **Status:** Verified (2026-10-12, user-confirmed)
 - **Implemented:**
   - `src/lib/useDesktopNotifications.js` — seed-without-fire, hydration guard, per-user state isolation, dedup via sentRef, overdue-before-upcoming scan.
   - `src/App.jsx` — `assignmentsLoaded` flag, `notifTick` 5-minute interval, `reminders` useMemo, hook call before early returns.
@@ -125,9 +125,24 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 **Goal:** Reminders when the tab is inactive or closed where technically possible; handle scheduling, time zones, permission state, duplicate delivery, stale assignments; consider server-side delivery.
 
-- **Status:** Not started
-- **Note:** Browser notifications alone cannot guarantee delivery with the browser closed. May need the desktop app, a background process, push infrastructure, or similar.
-- **Next step:** Research once 3B is manually verified.
+- **Status:** Verified (core flow) — deployed and manually tested 2026-10-12
+- **Approach:** Web Push. pg_cron → `send-reminders` Edge Function every 15 min → web-push to each subscribed browser → service worker shows it. Full design, setup and test steps: `docs/PHASE-3C-SETUP.md`.
+- **Implemented (2026-10-12):**
+  - `supabase/migrations/003_push_grants.sql` — table GRANTs for `authenticated` / `service_role` (this project doesn't auto-grant API roles on SQL-created tables).
+  - `supabase/migrations/002_push_subscriptions.sql` — `push_subscriptions` (RLS: own rows select/delete), `push_reminders_sent` (service-role only), `register_push_subscription()` RPC (validates endpoint, keys, time zone).
+  - `supabase/functions/send-reminders/index.ts` — cron-secret auth, per-user time zone, dedup via sent log (key includes due date), prunes 404/410 endpoints, marks sent only after a browser accepts.
+  - `supabase/functions/_shared/reminderSelection.js` — upcoming = today…now+48h; overdue = due yesterday only (no backlog flood); >3 reminders → one summary.
+  - `public/sw.js` — shows push unless a JARVIS tab is visible; click focuses/opens JARVIS on Assignments.
+  - `src/lib/pushSubscription.js`, `src/lib/usePushSubscription.js`, App wiring (sign-out removes subscription, `?view=` deep link, SW navigate message), Settings "Background Reminders" status row.
+  - `scripts/setup-push-keys.mjs` — VAPID keys + cron secret written to gitignored files (`.env.local`, `supabase/functions/.env`). Keys generated 2026-10-12.
+- **Verified (automated):** 37/37 tests (15 selection, 7 hook, 2 key decoding + existing 13), lint clean, build clean.
+- **Deployed (2026-10-12):** migrations 002 + 003 run; secrets set; `send-reminders` deployed (`--no-verify-jwt`); pg_cron job `jarvis-send-reminders` (id 1) every 15 min. Smoke test: no secret → 401; with secret → 200.
+- **Verified (manual, 2026-10-12):** JARVIS tab closed, browser running → triggered run returned `{"users":1,"sent":1}` and the Windows notification appeared (user-confirmed).
+- **Outstanding:**
+  - Not yet explicitly checked: click → opens Assignments; toggle off / sign-out removes the `push_subscriptions` row; a second run doesn't repeat the push; the scheduled (unattended) cron run.
+  - Known gap: if a reminder's push lands while a JARVIS tab is visible, the service worker suppresses it but the server still marks it sent. Reminders for assignments created in-tab are covered by the in-tab hook; ones already in the window when the tab loaded only show in the in-app bell.
+  - Browser fully closed is not covered (push TTL 6h) — that's Phase 5.
+- **Next step:** Run the remaining checks opportunistically; move on to the RLS audit.
 
 ## Phase 4 — AI Assistant
 
@@ -140,7 +155,33 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 ## Phase 5 — Desktop Experience
 
-**Goal:** Package the web app for Windows (Tauri being evaluated); native OS notifications; background execution and startup behavior; more dependable reminders; preserve auth, sync and settings; safe updates. Later: persistent assistant UI, quick access, optional voice, system tray, configurable startup.
+### 5A — Quick Panel (in-app)
+
+**Goal:** A compact, tabbed control panel for managing upcoming assignments at a glance, styled after a desktop-shell dashboard (reference: user-supplied screenshots, 2026-10-12 — tab row, large rounded tiles, ring gauges). Built as a self-contained React component inside the web app so 5B can reuse it unchanged as the desktop overlay.
+
+**Tabs:**
+- **Today** — summary tiles (due today · due this week · overdue) + assignments due today/tomorrow with one-click complete.
+- **Upcoming** — next assignments in due-date order; complete, open/edit, jump to the full Assignments view.
+- **Stats** — ring gauges: % completed this week, estimated hours due in the next 7 days, overdue count.
+- **Quick add** — single-row add (title · course · due date) using the existing `addAssignment` path.
+
+**Acceptance criteria:**
+- Opens over the current view from a header button and a keyboard shortcut; closes with Esc or clicking outside.
+- Reads the same `assignments` state and uses the existing CRUD handlers — no separate data path; changes show immediately everywhere.
+- Loading, empty and error states; works at narrow widths; keyboard and screen-reader accessible.
+- Matches the existing JARVIS theme (tokens from `src/styles/variables.css`), not a pasted-in second design system.
+- Component has no web-only assumptions that would block hosting it in a Tauri window.
+- Tests for tab content selection (today/upcoming/stats calculations) and quick add.
+
+- **Status:** Not started
+- **Open decision:** overlay on top of the app (recommended — becomes the 5B desktop overlay) vs. replacing the Dashboard.
+- **Next step:** Confirm the open decision, then build. Doesn't depend on Phase 4 and can start any time.
+
+### 5B — Windows Desktop App
+
+**Goal:** Package the web app for Windows (Tauri being evaluated); native OS notifications; background execution and startup behavior; more dependable reminders; preserve auth, sync and settings; safe updates. Later: persistent assistant UI, optional voice, system tray, configurable startup.
+
+**Quick Panel overlay:** host the 5A panel in a frameless, transparent, always-on-top window toggled by a global shortcut (e.g. Ctrl+Space) from anywhere in Windows.
 
 **Important:** browser notifications, Tauri desktop notifications and background-service reminders are different capabilities — implement and test each separately.
 
@@ -167,13 +208,16 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 ## Immediate priority
 
-1. **Manual Phase 3B browser test** — the only remaining gate before Phase 3B is verified. Follow the steps in the "How to manually test 3B" section above.
-2. Once 3B is verified, decide: clean up `[JARVIS notif]` diagnostics fully or move to Phase 3C / Phase 4.
-3. RLS policy audit (2A outstanding) before adding any new data types.
+1. RLS policy audit (2A outstanding) — now also covers `push_subscriptions` / `push_reminders_sent`.
+2. Phase 5A Quick Panel (in-app) — confirm overlay vs. Dashboard, then build. Independent of Phase 4.
+3. Phase 4 (AI assistant) scoping.
+4. Remaining 3C spot-checks (see 3C Outstanding).
 
 ## Session log
 
 | Date | What was done | Verified? | Next |
 |------|---------------|-----------|------|
+| 2026-10-12 | 3B marked verified (user-confirmed). Built and deployed Phase 3C Web Push (incl. migration 003 grants fix): migration 002, `send-reminders` Edge Function, shared selection logic, service worker, subscription hook, Settings status row, key setup script, setup doc. VAPID keys generated locally. | Automated (37/37, lint, build) + manual: background push delivered with tab closed | RLS audit, then Phase 4 |
+| 2026-10-12 | Planned Phase 5A Quick Panel from user's desktop-dashboard screenshots; split Phase 5 into 5A (in-app panel) and 5B (Windows app + overlay). | — | Decide overlay vs. Dashboard |
 | 2026-10-10 (late) | Diagnosed 3B: toggle stored `false`. `loadSettings()` auto-enables when permission is granted and no preference is stored; status tag shows Disabled/Allowed based on the toggle; notification icon → `favicon.svg`; diagnostic logs removed. Manual test: notification fired. Note: three stale dev servers were running on ports 5173–5175 (each a separate origin with its own settings). | Manual (firing) + automated | Confirm click navigation + persistence; RLS audit; Phase 4 scoping |
 | 2026-10-10 | Roadmap and CLAUDE.md created. Repo inspected: all commits present (`d5351be`, `aa24c1e`, `2081076`, `6f3a625`). Vitest pool changed to `vmThreads` for Windows stability. Diagnostic console.logs removed. 12/12 tests pass, lint clean, build clean. | Automated only | Manual Phase 3B browser test |
