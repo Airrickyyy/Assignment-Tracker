@@ -4,6 +4,16 @@ JARVIS is a personal AI assistant and productivity app (inspired by Tony Stark's
 
 Prioritize reliability, good architecture, polished UI/UX and genuinely useful functionality over adding features. The full phase-by-phase plan and status tracker lives in `docs/ROADMAP.md` — read it before starting new work and update it when you finish.
 
+## The roadmap is the plan — protect it
+
+`docs/ROADMAP.md` is the single source of truth for phases, their scope and the user's planned ideas (e.g. Phase 5A Quick Panel, from the user's own design reference).
+
+- **Read it at the start of every session** before suggesting or starting work.
+- **Never delete, rename, renumber, merge, re-scope or "simplify away" a phase, sub-phase, planned feature or open decision without the user explicitly agreeing in that session.** If something looks obsolete or wrong, say so and ask.
+- Routine updates don't need approval: status, Implemented/Verified/Outstanding notes, the session log, Immediate priority ordering of already-agreed work.
+- New ideas from the user get **added** as new sections or sub-phases — never written over existing ones.
+- Open decisions stay recorded as open until the user decides; record the decision and date when they do.
+
 ## Ground rules
 
 - **Continue from the existing repo. Do not start from scratch** or migrate frameworks without inspecting the code and identifying a concrete reason.
@@ -27,6 +37,9 @@ Prioritize reliability, good architecture, polished UI/UX and genuinely useful f
 - `src/lib/useDesktopNotifications.js` — notification hook: permission checks, initial seeding, dedup, triggers
 - `src/lib/notifications.js` — `deriveReminders`, classifies upcoming and overdue assignments
 - `src/lib/__tests__/useDesktopNotifications.test.js` — hook unit + integration tests
+- `src/lib/pushSubscription.js`, `src/lib/usePushSubscription.js`, `public/sw.js` — Phase 3C browser push subscription + service worker
+- `supabase/functions/send-reminders/` + `supabase/functions/_shared/reminderSelection.js` — Phase 3C Edge Function and shared selection logic
+- `supabase/migrations/` — schema, RLS and grants (run manually in the Supabase SQL Editor)
 - `vite.config.js` — Vite and Vitest config
 
 ## History (verify — hashes are from a previous session)
@@ -37,20 +50,16 @@ Prioritize reliability, good architecture, polished UI/UX and genuinely useful f
 - Phase 3A in-app reminders: commit `d5351be`.
 - Phase 3B browser/desktop notifications: commit `aa24c1e` — permission handling, settings toggle, test-notification button, upcoming/overdue notifications, dedup, 5-minute check interval, click navigates to assignments section.
 - Notification bug fixes: commits `2081076`, `6f3a625` — 12/12 tests passing, lint clean, build succeeds, diagnostic logs removed.
+- Phase 3B verified (user-confirmed) 2026-10-12.
+- Phase 3C background push reminders: commit `ac7b7ef`, deployed and manually verified 2026-10-12.
 
-## Current main issue: notifications
+## Current status
 
-**Unresolved:** verify in a real browser on Windows that creating a new assignment due tomorrow fires a notification.
+See `docs/ROADMAP.md` (status per phase + Immediate priority). As of 2026-10-12: Phases 3B (browser notifications) and 3C (background Web Push) are verified; next up is the RLS audit, then Phase 5A Quick Panel (open decision: overlay vs. replacing the Dashboard).
 
-Intended flow:
-1. User signs in.
-2. JARVIS loads the user's assignments.
-3. Existing assignments are seeded (registered) without a notification flood.
-4. User creates a new assignment due tomorrow.
-5. `deriveReminders` classifies it as upcoming.
-6. `useDesktopNotifications` recognizes it as a new reminder.
-7. A notification appears, titled like `Due soon: New Task`.
-8. Clicking it navigates to the assignments section and closes the notification.
+## Notifications reference
+
+In-tab flow (Phase 3B): sign in → assignments load → existing reminders seeded without firing → a new assignment due tomorrow is classified upcoming by `deriveReminders` → `useDesktopNotifications` fires `Due soon: <title>` → click navigates to Assignments. Background flow (Phase 3C): see `docs/PHASE-3C-SETUP.md`.
 
 ### Bug 1 — notification preference reset (fixed)
 
