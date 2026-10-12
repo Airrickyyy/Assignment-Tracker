@@ -31,7 +31,9 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 - **Status:** Implemented (unverified in browser)
 - **Implemented:** Dashboard, assignments view, calendar view, settings view, in-memory task toggle, sampleData — all present in repo as of commit `da3d009`.
 - **Verified:** Code structure confirmed; acceptance criteria not manually tested end-to-end.
-- **Outstanding:** No known bugs. Browser walkthrough not done.
+- **Outstanding:**
+  - **Fixed 2026-10-12 — stale overdue status:** the stored `status` only updates on create/edit, so past-due `pending` assignments never showed as overdue (Dashboard card/banner, Priority items, Assignments "Overdue" filter). App now passes every view `withEffectiveStatus()` (`src/lib/assignmentStatus.js`), re-derived on the 5-minute tick. Also fixed: "Due This Week" skipped items due today; Upcoming Deadlines tagged today as "1 day" and past items as "Today". Regression tests in `Dashboard.test.jsx` + `assignmentStatus.test.js`; verified in Chrome against live data (6 overdue shown).
+  - Browser walkthrough not done.
 - **Next step:** Covered by Phase 3B manual test — treat as verified once that passes.
 
 ## Phase 2 — Cloud-Connected JARVIS
@@ -182,9 +184,18 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 - Component has no web-only assumptions that would block hosting it in a Tauri window.
 - Tests for tab content selection (today/upcoming/stats calculations) and quick add.
 
-- **Status:** Not started
-- **Open decision:** overlay on top of the app (recommended — becomes the 5B desktop overlay) vs. replacing the Dashboard.
-- **Next step:** Confirm the open decision, then build. Doesn't depend on Phase 4 and can start any time.
+- **Status:** Implemented — automated checks passing, visually checked; user walkthrough outstanding
+- **Decision (2026-10-12, user):** overlay on top of the app, opened from a header button / keyboard shortcut. The same component becomes the 5B desktop overlay window.
+- **Implemented (2026-10-12):**
+  - `src/lib/quickPanel.js` — pure data: overdue/today/tomorrow/upcoming/next-7-days, week completion (Mon–Sun), estimated hours left vs total (next 7 days), on-track ratio, due labels. Overdue derived from dates, not stored status.
+  - `src/components/quickpanel/QuickPanel.jsx` — host-agnostic tabbed panel (Today tiles + lists, Upcoming, Stats rings, Quick add). Uses App's existing `toggleAssignment` / `addAssignment` (now returns success boolean).
+  - `src/components/quickpanel/QuickPanelOverlay.jsx` — web host: backdrop, Esc / outside-click close, focus moved in, trapped, restored.
+  - Header button in `TopBar`; Ctrl+Space toggles from anywhere while signed in.
+  - Accessibility: tablist with arrow/Home/End keys, labelled row actions, aria-live add status, reduced-motion support; single-column layout under 600px.
+- **Verified (automated):** 70/70 tests (incl. 6 data + 11 panel + 4 overlay), lint clean, build clean.
+- **Verified (visual, 2026-10-12):** in Chrome against live data — header button opens it; Today/Stats/Quick add render correctly; Esc closes; Ctrl+Space reopens; no console errors. Quick add and complete were not exercised against live data.
+- **Outstanding:** user walkthrough — add an assignment via Quick add, complete one from the panel, check narrow-window layout.
+- **Next step:** User walkthrough; then 5B or Phase 4.
 
 ### 5B — Windows Desktop App
 
@@ -217,7 +228,7 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 ## Immediate priority
 
-1. Phase 5A Quick Panel (in-app) — confirm overlay vs. Dashboard, then build. Independent of Phase 4.
+1. Phase 5A Quick Panel — user walkthrough.
 2. Phase 4 (AI assistant) scoping.
 3. Remaining 3C spot-checks (see 3C Outstanding).
 
@@ -226,6 +237,8 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 | Date | What was done | Verified? | Next |
 |------|---------------|-----------|------|
 | 2026-10-12 | 3B marked verified (user-confirmed). Built and deployed Phase 3C Web Push (incl. migration 003 grants fix): migration 002, `send-reminders` Edge Function, shared selection logic, service worker, subscription hook, Settings status row, key setup script, setup doc. VAPID keys generated locally. | Automated (37/37, lint, build) + manual: background push delivered with tab closed | RLS audit, then Phase 4 |
+| 2026-10-12 | Built Phase 5A Quick Panel (overlay; Ctrl+Space). Found pre-existing Dashboard overdue bug (stored status never ages). | Automated (61/61) + visual in Chrome | User walkthrough |
+| 2026-10-12 | Fixed stale overdue status across views (effective status derived from due date) + Dashboard week/tag date math. | Automated (70/70) + Chrome, live data | — |
 | 2026-10-12 | RLS audit of live DB: all tables RLS-on and owner-scoped; revoked unused TRUNCATE/TRIGGER/REFERENCES from anon/authenticated (migration 004). 3C dedup confirmed (second run sent 0). | Manual (SQL audit) | Phase 5A Quick Panel |
 | 2026-10-12 | Planned Phase 5A Quick Panel from user's desktop-dashboard screenshots; split Phase 5 into 5A (in-app panel) and 5B (Windows app + overlay). | — | Decide overlay vs. Dashboard |
 | 2026-10-10 (late) | Diagnosed 3B: toggle stored `false`. `loadSettings()` auto-enables when permission is granted and no preference is stored; status tag shows Disabled/Allowed based on the toggle; notification icon → `favicon.svg`; diagnostic logs removed. Manual test: notification fired. Note: three stale dev servers were running on ports 5173–5175 (each a separate origin with its own settings). | Manual (firing) + automated | Confirm click navigation + persistence; RLS audit; Phase 4 scoping |

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Shell from './components/layout/Shell'
 import AuthScreen from './components/auth/AuthScreen'
@@ -7,6 +7,7 @@ import AssignmentsView from './components/assignments/AssignmentsView'
 import CalendarView from './components/calendar/CalendarView'
 import SettingsView from './components/settings/SettingsView'
 import MigrationBanner from './components/migration/MigrationBanner'
+import QuickPanelOverlay from './components/quickpanel/QuickPanelOverlay'
 import './components/migration/MigrationBanner.css'
 import {
   fetchAssignments,
@@ -16,6 +17,7 @@ import {
   bulkInsertAssignments,
 } from './lib/assignmentsRepo'
 import { deriveReminders } from './lib/notifications'
+import { withEffectiveStatus } from './lib/assignmentStatus'
 import { useDesktopNotifications } from './lib/useDesktopNotifications'
 import { usePushSubscription } from './lib/usePushSubscription'
 import { disablePush } from './lib/pushSubscription'
@@ -109,6 +111,11 @@ function App() {
   }, [])
 
   const reminders = useMemo(() => deriveReminders(assignments), [assignments, notifTick])
+
+  // What views display: stored status corrected for dates that have since
+  // passed (the DB value only updates on create/edit). notifTick re-derives
+  // it across midnight.
+  const viewAssignments = useMemo(() => withEffectiveStatus(assignments), [assignments, notifTick])
 
   useEffect(() => {
     if (!sessionUserId) {
@@ -265,8 +272,10 @@ function App() {
     try {
       const created = await insertAssignment(sessionUserId, { ...data, status })
       setAssignments(prev => [created, ...prev])
+      return true
     } catch (err) {
       setCrudError(err.message)
+      return false
     }
   }
 
@@ -326,6 +335,27 @@ function App() {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage)
   }, [])
 
+  // ── Quick Panel (Phase 5A) ───────────────────────────────────────────────
+  const [quickPanelOpen, setQuickPanelOpen] = useState(false)
+  const closeQuickPanel = useCallback(() => setQuickPanelOpen(false), [])
+  const signedIn = Boolean(session) && !isRecovery
+
+  // Ctrl+Space toggles the panel from anywhere in the app.
+  useEffect(() => {
+    if (!signedIn) {
+      setQuickPanelOpen(false)
+      return
+    }
+    function onKeyDown(e) {
+      if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'Space') {
+        e.preventDefault()
+        setQuickPanelOpen(open => !open)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [signedIn])
+
   // ── Routing ──────────────────────────────────────────────────────────────
   if (session === undefined) return null
   if (!session || isRecovery) return <AuthScreen isRecovery={isRecovery} />
@@ -358,7 +388,7 @@ function App() {
   const views = {
     dashboard: (
       <Dashboard
-        assignments={assignments}
+        assignments={viewAssignments}
         schedule={schedule}
         toggleAssignment={toggleAssignment}
         toggleTask={toggleTask}
@@ -368,7 +398,7 @@ function App() {
     ),
     assignments: (
       <AssignmentsView
-        assignments={assignments}
+        assignments={viewAssignments}
         assignmentsLoading={assignmentsLoading}
         toggleAssignment={toggleAssignment}
         addAssignment={addAssignment}
@@ -377,21 +407,34 @@ function App() {
         settings={settings}
       />
     ),
-    calendar: <CalendarView assignments={assignments} />,
+    calendar: <CalendarView assignments={viewAssignments} />,
     settings:  <SettingsView settings={settings} updateSettings={updateSettings} pushStatus={pushStatus} />,
   }
 
   return (
-    <Shell
-      activeView={activeView}
-      setActiveView={setActiveView}
-      onSignOut={signOut}
-      banner={banner}
-      reminders={reminders}
-      onNavigate={setActiveView}
-    >
-      {views[activeView]}
-    </Shell>
+    <>
+      <Shell
+        activeView={activeView}
+        setActiveView={setActiveView}
+        onSignOut={signOut}
+        banner={banner}
+        reminders={reminders}
+        onNavigate={setActiveView}
+        onOpenQuickPanel={() => setQuickPanelOpen(true)}
+      >
+        {views[activeView]}
+      </Shell>
+      <QuickPanelOverlay
+        open={quickPanelOpen}
+        onClose={closeQuickPanel}
+        assignments={viewAssignments}
+        loading={assignmentsLoading}
+        defaultPriority={settings.defaultPriority}
+        onToggle={toggleAssignment}
+        onAdd={addAssignment}
+        onNavigate={setActiveView}
+      />
+    </>
   )
 }
 

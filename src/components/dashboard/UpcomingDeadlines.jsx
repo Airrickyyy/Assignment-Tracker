@@ -1,3 +1,4 @@
+import { daysUntil } from '../../lib/assignmentStatus'
 import './UpcomingDeadlines.css'
 
 function formatDate(dateStr) {
@@ -7,17 +8,16 @@ function formatDate(dateStr) {
   })
 }
 
-function daysLeft(dateStr, status) {
-  if (status === 'overdue') return { label: 'Overdue', cls: 'tag--overdue' }
-  const due = new Date(dateStr + 'T23:59:59')
-  const diff = Math.ceil((due - new Date()) / (1000 * 60 * 60 * 24))
-  if (diff <= 0) return { label: 'Today', cls: 'tag--today' }
+function daysLeft(dateStr, status, today) {
+  const diff = daysUntil(dateStr, today)
+  if (status === 'overdue' || diff < 0) return { label: 'Overdue', cls: 'tag--overdue' }
+  if (diff === 0) return { label: 'Today', cls: 'tag--today' }
   if (diff === 1) return { label: '1 day', cls: 'tag--soon' }
   if (diff <= 3) return { label: `${diff} days`, cls: 'tag--soon' }
   return { label: `${diff} days`, cls: 'tag--normal' }
 }
 
-function UpcomingDeadlines({ assignments }) {
+function UpcomingDeadlines({ assignments, today }) {
   const upcoming = assignments
     .filter(a => a.status !== 'completed')
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
@@ -28,7 +28,7 @@ function UpcomingDeadlines({ assignments }) {
       <h2 className="section-title">Upcoming Deadlines</h2>
       <ul className="deadlines-list">
         {upcoming.map(a => {
-          const { label, cls } = daysLeft(a.dueDate, a.status)
+          const { label, cls } = daysLeft(a.dueDate, a.status, today)
           return (
             <li key={a.id} className="deadline-item">
               <div className={`deadline-priority priority--${a.priority}`} aria-hidden="true" />

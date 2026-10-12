@@ -2,21 +2,23 @@ import SummaryCard from './SummaryCard'
 import PrioritySection from './PrioritySection'
 import TodaySchedule from './TodaySchedule'
 import UpcomingDeadlines from './UpcomingDeadlines'
+import { localDateStr, shiftDays } from '../../lib/quickPanel'
 import './Dashboard.css'
 
-function Dashboard({ assignments, schedule, toggleAssignment, toggleTask, settings = {}, onNavigate }) {
-  const today   = new Date()
-  const weekEnd = new Date(today)
-  weekEnd.setDate(today.getDate() + 7)
+// `assignments` carry the effective status (see lib/assignmentStatus), so
+// 'overdue' reflects today's date rather than the last save.
+function Dashboard({ assignments, schedule, toggleAssignment, toggleTask, settings = {}, onNavigate, now = new Date() }) {
+  const today   = localDateStr(now)
+  const weekEnd = shiftDays(today, 7)
 
   const pending   = assignments.filter(a => a.status === 'pending').length
   const overdue   = assignments.filter(a => a.status === 'overdue').length
   const completed = assignments.filter(a => a.status === 'completed').length
-  const dueThisWeek = assignments.filter(a => {
-    if (a.status === 'completed') return false
-    const due = new Date(a.dueDate + 'T00:00:00')
-    return due >= today && due <= weekEnd
-  }).length
+  // Due today through 7 days from now, inclusive. Compared as date strings so
+  // assignments due today count even after midnight has passed this morning.
+  const dueThisWeek = assignments.filter(a =>
+    a.status !== 'completed' && a.dueDate >= today && a.dueDate <= weekEnd,
+  ).length
 
   const showCompleted = settings.showCompletedOnDashboard !== false
 
@@ -56,7 +58,7 @@ function Dashboard({ assignments, schedule, toggleAssignment, toggleTask, settin
 
       <div className="dashboard-grid">
         <TodaySchedule schedule={schedule} onToggle={toggleTask} />
-        <UpcomingDeadlines assignments={assignments} />
+        <UpcomingDeadlines assignments={assignments} today={today} />
       </div>
     </div>
   )

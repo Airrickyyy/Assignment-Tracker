@@ -2,7 +2,18 @@ import { useState, useEffect } from 'react'
 import NotificationBell from '../notifications/NotificationBell'
 import './TopBar.css'
 
-function TopBar({ title, reminders, onNavigate }) {
+function PanelIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="15" height="15" aria-hidden="true">
+      <rect x="3" y="3" width="6" height="6" rx="1.5" />
+      <rect x="11" y="3" width="6" height="6" rx="1.5" />
+      <rect x="3" y="11" width="6" height="6" rx="1.5" />
+      <rect x="11" y="11" width="6" height="6" rx="3" />
+    </svg>
+  )
+}
+
+function TopBar({ title, reminders, onNavigate, onOpenQuickPanel }) {
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -30,6 +41,17 @@ function TopBar({ title, reminders, onNavigate }) {
       <div className="topbar-right">
         <span className="topbar-date">{formattedDate}</span>
         <span className="topbar-time">{formattedTime}</span>
+        {onOpenQuickPanel && (
+          <button
+            type="button"
+            className="topbar-panel-btn"
+            onClick={onOpenQuickPanel}
+            aria-label="Open Quick Panel (Ctrl+Space)"
+            title="Quick Panel (Ctrl+Space)"
+          >
+            <PanelIcon />
+          </button>
+        )}
         <NotificationBell reminders={reminders} onNavigate={onNavigate} />
         <div className="system-indicator">
           <span className="indicator-dot" aria-hidden="true" />
