@@ -17,6 +17,8 @@ import {
 } from './lib/assignmentsRepo'
 import { deriveReminders } from './lib/notifications'
 import { useDesktopNotifications } from './lib/useDesktopNotifications'
+import { usePushSubscription } from './lib/usePushSubscription'
+import { disablePush } from './lib/pushSubscription'
 import { fetchPreferences, upsertPreferences } from './lib/preferencesRepo'
 import { loadAssignments, loadSettings, saveSettings, DEFAULT_SETTINGS } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
@@ -27,6 +29,20 @@ function deriveStatus(dueDate, currentStatus) {
   today.setHours(0, 0, 0, 0)
   const due = new Date(dueDate + 'T00:00:00')
   return due < today ? 'overdue' : 'pending'
+}
+
+const VIEWS = ['dashboard', 'assignments', 'calendar', 'settings']
+
+// A background push notification opens JARVIS at /?view=<name>.
+// Read it once, then strip it so a refresh doesn't keep forcing that view.
+function initialView() {
+  const params = new URLSearchParams(window.location.search)
+  const view = params.get('view')
+  if (!view) return 'dashboard'
+  params.delete('view')
+  const query = params.toString()
+  window.history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash)
+  return VIEWS.includes(view) ? view : 'dashboard'
 }
 
 function App() {
@@ -52,12 +68,19 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  function signOut() {
+  async function signOut() {
+    // Drop this browser's push subscription while the session can still
+    // authorise the delete, so the next account here doesn't get our pushes.
+    try {
+      await disablePush()
+    } catch (err) {
+      console.warn('JARVIS: could not remove push subscription —', err?.message ?? err)
+    }
     supabase.auth.signOut()
   }
 
   // ── Planner state ────────────────────────────────────────────────────────
-  const [activeView,        setActiveView]        = useState('dashboard')
+  const [activeView,        setActiveView]        = useState(initialView)
   const [assignments,       setAssignments]       = useState([])
   const [assignmentsLoading,  setAssignmentsLoading] = useState(false)
   const [assignmentsLoaded,   setAssignmentsLoaded]  = useState(false)
@@ -284,6 +307,25 @@ function App() {
     onNavigate: setActiveView,
   })
 
+  // ── Background push reminders (Phase 3C) ─────────────────────────────────
+  const pushStatus = usePushSubscription({
+    enabled: settings.desktopNotificationsEnabled,
+    sessionUserId,
+  })
+
+  // Clicking a push notification while JARVIS is already open focuses this
+  // tab and the service worker asks us to switch views.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    function onMessage(event) {
+      if (event.data?.type === 'jarvis:navigate' && VIEWS.includes(event.data.view)) {
+        setActiveView(event.data.view)
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [])
+
   // ── Routing ──────────────────────────────────────────────────────────────
   if (session === undefined) return null
   if (!session || isRecovery) return <AuthScreen isRecovery={isRecovery} />
@@ -336,7 +378,7 @@ function App() {
       />
     ),
     calendar: <CalendarView assignments={assignments} />,
-    settings:  <SettingsView settings={settings} updateSettings={updateSettings} />,
+    settings:  <SettingsView settings={settings} updateSettings={updateSettings} pushStatus={pushStatus} />,
   }
 
   return (

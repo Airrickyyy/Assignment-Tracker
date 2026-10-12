@@ -71,7 +71,41 @@ function Toggle({ value, onChange }) {
   )
 }
 
-function DesktopNotifSection({ settings, updateSettings }) {
+const PUSH_STATUS = {
+  active:       { label: 'Active',         tone: 'ok'    },
+  registering:  { label: 'Connecting…',    tone: 'off'   },
+  inactive:     { label: 'Off',            tone: 'off'   },
+  unconfigured: { label: 'Not configured', tone: 'warn'  },
+  unsupported:  { label: 'Not supported',  tone: 'warn'  },
+  error:        { label: 'Error',          tone: 'error' },
+}
+
+function BackgroundRemindersRow({ pushStatus }) {
+  const { label, tone } = PUSH_STATUS[pushStatus] ?? PUSH_STATUS.inactive
+  return (
+    <>
+      <SettingsRow
+        label="Background Reminders"
+        description="Get reminders even when JARVIS isn't open, as long as your browser is running."
+      >
+        <span className={`notif-status-tag notif-status-tag--${tone}`}>{label}</span>
+      </SettingsRow>
+      {pushStatus === 'error' && (
+        <p className="notif-hint">
+          JARVIS couldn't register this browser for background reminders. Reload to retry;
+          if it keeps failing, check the browser console.
+        </p>
+      )}
+      {pushStatus === 'unconfigured' && (
+        <p className="notif-hint">
+          Background reminders aren't set up for this deployment yet (missing VAPID public key).
+        </p>
+      )}
+    </>
+  )
+}
+
+function DesktopNotifSection({ settings, updateSettings, pushStatus }) {
   const supported = 'Notification' in window
   const permission = supported ? Notification.permission : 'unsupported'
 
@@ -165,11 +199,12 @@ function DesktopNotifSection({ settings, updateSettings }) {
       <p className="notif-hint">
         Note: Windows Focus Assist / Do Not Disturb may suppress notifications even when allowed.
       </p>
+      <BackgroundRemindersRow pushStatus={pushStatus} />
     </>
   )
 }
 
-function SettingsView({ settings, updateSettings }) {
+function SettingsView({ settings, updateSettings, pushStatus }) {
   function reset() {
     updateSettings({ ...DEFAULT_SETTINGS })
   }
@@ -223,7 +258,7 @@ function SettingsView({ settings, updateSettings }) {
         title="Notifications"
         description="Control how JARVIS alerts you about deadlines."
       >
-        <DesktopNotifSection settings={settings} updateSettings={updateSettings} />
+        <DesktopNotifSection settings={settings} updateSettings={updateSettings} pushStatus={pushStatus} />
       </SettingsSection>
 
       <SettingsSection

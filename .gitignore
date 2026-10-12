@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI / Edge Function secrets
+supabase/.temp
+supabase/functions/.env
