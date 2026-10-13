@@ -1,5 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { buildQuickPanelData, dueLabel, shiftDays } from '../../lib/quickPanel'
+import { BREAK_MIN, FOCUS_PRESETS_MIN, formatClock } from '../../lib/focusTimer'
 import './QuickPanel.css'
 
 // Host-agnostic: no overlay, routing or window assumptions. The web app wraps
@@ -9,6 +10,7 @@ import './QuickPanel.css'
 const TABS = [
   { id: 'today',    label: 'Today'     },
   { id: 'upcoming', label: 'Upcoming'  },
+  { id: 'focus',    label: 'Focus'     },
   { id: 'stats',    label: 'Stats'     },
   { id: 'add',      label: 'Quick add' },
 ]
@@ -116,13 +118,13 @@ function AssignmentList({ title, tone, items, ...rowProps }) {
   )
 }
 
-function Ring({ fraction, value, label, detail, tone = 'accent' }) {
+function Ring({ fraction, value, label, detail, tone = 'accent', size = 96 }) {
   const r = 34
   const circumference = 2 * Math.PI * r
   const clamped = Math.max(0, Math.min(1, fraction ?? 0))
   return (
     <figure className={`qp-ring qp-ring--${tone}`}>
-      <svg viewBox="0 0 84 84" width="96" height="96" role="img" aria-label={`${label}: ${value}. ${detail}`}>
+      <svg viewBox="0 0 84 84" width={size} height={size} role="img" aria-label={`${label}: ${value}. ${detail}`}>
         <circle className="qp-ring-track" cx="42" cy="42" r={r} />
         <circle
           className="qp-ring-fill"
@@ -212,6 +214,88 @@ function StatsTab({ stats }) {
   )
 }
 
+export function formatDuration(seconds) {
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m ? `${h}h ${m}m` : `${h}h`
+}
+
+function FocusTab({ focus, focusToday, assignments }) {
+  const ids = useId()
+  const { timer, remaining } = focus
+  const [minutes, setMinutes] = useState(FOCUS_PRESETS_MIN[0])
+  const [assignmentId, setAssignmentId] = useState('')
+  const open = assignments.filter(a => a.status !== 'completed')
+
+  const todayLine = focusToday && (
+    <p className="qp-focus-today">
+      Today: <strong>{formatDuration(focusToday.seconds)}</strong> focused · {focusToday.sessions} session{focusToday.sessions === 1 ? '' : 's'}
+    </p>
+  )
+
+  if (!timer) {
+    return (
+      <div className="qp-focus">
+        <div className="qp-field qp-field--wide">
+          <label htmlFor={`${ids}-assignment`}>Working on</label>
+          <select id={`${ids}-assignment`} value={assignmentId} onChange={e => setAssignmentId(e.target.value)}>
+            <option value="">No specific assignment</option>
+            {open.map(a => (
+              <option key={a.id} value={a.id}>{a.title}{a.course ? ` · ${a.course}` : ''}</option>
+            ))}
+          </select>
+        </div>
+        <div className="qp-focus-presets" role="group" aria-label="Focus length">
+          {FOCUS_PRESETS_MIN.map(m => (
+            <button
+              key={m} type="button"
+              className={`qp-chip${minutes === m ? ' is-active' : ''}`}
+              aria-pressed={minutes === m}
+              onClick={() => setMinutes(m)}
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+        <button
+          type="button" className="qp-add-btn qp-focus-start"
+          onClick={() => focus.start({ minutes, assignment: open.find(a => String(a.id) === assignmentId) ?? null })}
+        >
+          Start focus
+        </button>
+        <p className="qp-focus-hint">A {BREAK_MIN}-minute break starts automatically afterwards.</p>
+        {todayLine}
+      </div>
+    )
+  }
+
+  const isBreak = timer.phase === 'break'
+  const title = isBreak ? 'Break' : (timer.label || 'Focus')
+  return (
+    <div className="qp-focus qp-focus--active">
+      <Ring
+        size={168}
+        tone={isBreak ? 'ok' : 'accent'}
+        fraction={remaining / timer.plannedMs}
+        value={formatClock(remaining)}
+        label={title}
+        detail={isBreak ? 'Stretch, drink water' : (timer.course || (timer.status === 'paused' ? 'Paused' : 'Focusing'))}
+      />
+      <div className="qp-focus-actions">
+        {timer.status === 'running'
+          ? <button type="button" className="qp-chip" onClick={focus.pause}>Pause</button>
+          : <button type="button" className="qp-chip is-active" onClick={focus.resume}>Resume</button>}
+        <button type="button" className="qp-chip" onClick={focus.stop}>
+          {isBreak ? 'Skip break' : 'Stop'}
+        </button>
+      </div>
+      {todayLine}
+    </div>
+  )
+}
+
 function QuickAddTab({ today, defaultPriority, onAdd }) {
   const ids = useId()
   const titleRef = useRef(null)
@@ -295,6 +379,8 @@ function QuickPanel({
   onAdd,
   onNavigate,
   onClose,
+  focus,
+  focusToday,
   initialTab = 'today',
   now,
 }) {
@@ -321,17 +407,20 @@ function QuickPanel({
   }
 
   function onTabKeyDown(e) {
-    const i = TABS.findIndex(t => t.id === tab)
+    const i = tabs.findIndex(t => t.id === tab)
     let next = null
-    if (e.key === 'ArrowRight') next = TABS[(i + 1) % TABS.length]
-    if (e.key === 'ArrowLeft')  next = TABS[(i - 1 + TABS.length) % TABS.length]
-    if (e.key === 'Home')       next = TABS[0]
-    if (e.key === 'End')        next = TABS[TABS.length - 1]
+    if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length]
+    if (e.key === 'ArrowLeft')  next = tabs[(i - 1 + tabs.length) % tabs.length]
+    if (e.key === 'Home')       next = tabs[0]
+    if (e.key === 'End')        next = tabs[tabs.length - 1]
     if (!next) return
     e.preventDefault()
     setTab(next.id)
     tabRefs.current[next.id]?.focus()
   }
+
+  // The Focus tab appears only when the host provides a timer.
+  const tabs = focus ? TABS : TABS.filter(t => t.id !== 'focus')
 
   const listProps = { today: data.today, busyIds, onComplete: complete, onOpen: openAssignments }
 
@@ -339,7 +428,7 @@ function QuickPanel({
     <div className="qp">
       <div className="qp-header">
         <div className="qp-tabs" role="tablist" aria-label="Quick Panel" onKeyDown={onTabKeyDown}>
-          {TABS.map(t => (
+          {tabs.map(t => (
             <button
               key={t.id}
               ref={el => { tabRefs.current[t.id] = el }}
@@ -368,12 +457,14 @@ function QuickPanel({
         aria-labelledby={`${ids}-tab-${tab}`}
         aria-busy={loading || undefined}
       >
-        {loading && tab !== 'add' ? (
+        {loading && tab !== 'add' && tab !== 'focus' ? (
           <p className="qp-empty">Loading assignments…</p>
         ) : tab === 'today' ? (
           <TodayTab data={data} listProps={listProps} onTab={setTab} />
         ) : tab === 'upcoming' ? (
           <UpcomingTab data={data} listProps={listProps} onViewAll={openAssignments} />
+        ) : tab === 'focus' && focus ? (
+          <FocusTab focus={focus} focusToday={focusToday} assignments={assignments} />
         ) : tab === 'stats' ? (
           <StatsTab stats={data.stats} />
         ) : (

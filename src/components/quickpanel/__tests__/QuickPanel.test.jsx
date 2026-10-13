@@ -118,6 +118,47 @@ describe('QuickPanel', () => {
   })
 })
 
+describe('QuickPanel Focus tab', () => {
+  function fakeFocus(timer = null) {
+    return { timer, remaining: timer ? timer.plannedMs : 0, start: vi.fn(), pause: vi.fn(), resume: vi.fn(), stop: vi.fn() }
+  }
+
+  it('is hidden when the host provides no timer', () => {
+    renderPanel()
+    expect(screen.queryByRole('tab', { name: 'Focus' })).toBeNull()
+  })
+
+  it('starts a focus session for the chosen assignment and length', () => {
+    const focus = fakeFocus()
+    renderPanel({ focus, focusToday: { seconds: 4500, sessions: 3 } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Focus' }))
+    expect(screen.getByText(/1h 15m/)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Working on'), { target: { value: 't' } })
+    fireEvent.click(screen.getByRole('button', { name: '50 min' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }))
+    expect(focus.start).toHaveBeenCalledWith({ minutes: 50, assignment: expect.objectContaining({ id: 't' }) })
+  })
+
+  it('shows the countdown with pause and stop while running', () => {
+    const focus = fakeFocus({ id: 'x', phase: 'focus', status: 'running', plannedMs: 1500000, label: 'Lab 4', course: 'CS' })
+    renderPanel({ focus, initialTab: 'focus' })
+    expect(screen.getByRole('img', { name: /Lab 4: 25:00/ })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    expect(focus.pause).toHaveBeenCalled()
+    expect(focus.stop).toHaveBeenCalled()
+  })
+
+  it('offers Resume when paused and Skip break during a break', () => {
+    const paused = fakeFocus({ id: 'x', phase: 'focus', status: 'paused', plannedMs: 1500000, label: '', course: '' })
+    renderPanel({ focus: paused, initialTab: 'focus' })
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeTruthy()
+    cleanup()
+    renderPanel({ focus: fakeFocus({ id: 'b', phase: 'break', status: 'running', plannedMs: 300000 }), initialTab: 'focus' })
+    expect(screen.getByRole('button', { name: 'Skip break' })).toBeTruthy()
+  })
+})
+
 describe('QuickPanelOverlay', () => {
   function renderOverlay(open = true) {
     const onClose = vi.fn()

@@ -14,6 +14,7 @@ function toFrontend(row) {
     points:         row.points          != null ? Number(row.points)          : undefined,
     estimatedHours: row.estimated_hours != null ? Number(row.estimated_hours) : undefined,
     description:    row.description     != null ? row.description              : undefined,
+    completedAt:    row.completed_at ?? undefined, // set by DB trigger (migration 005)
   }
 }
 

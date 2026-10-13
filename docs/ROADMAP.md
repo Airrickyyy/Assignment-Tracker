@@ -225,8 +225,9 @@ User asked for more widgets after a desktop-customisation reel ("Hitodama"). Req
 - **Notifications feed** — mirror recent Windows notifications in the panel. **Research needed:** Windows' notification-listener API requires package identity (MSIX); the current NSIS build has none.
 - **Instagram messages** — **not feasible as asked:** no API for personal-account DMs (Graph API messaging is business/creator accounts with Meta review); scraping or logging in as the user breaks Instagram's terms and risks the account. Only realistic route: Instagram notifications via the notifications feed above, if that research succeeds.
 
-- **Status:** Not started (planned)
-- **Next step:** After 5B step 2 is verified — focus timer first (pairs with 5D study tracking).
+- **Status:** In progress — focus timer built (2026-10-12); other widgets planned
+- **Focus timer (built):** Quick Panel **Focus** tab (web overlay and desktop panel window) — pick assignment, 25/50 min, pause/resume/stop, countdown ring, automatic 5-min break, notification at phase end (if notifications enabled). State is timestamp-based in localStorage (`src/lib/focusTimer.js`, `useFocusTimer.js`) so it survives reloads and is shared by both desktop windows; App is the single owner of completion (logs + notifies once). Automated tests only; user test pending.
+- **Next step:** User tests the Focus tab; then real editable schedule (unblocks "Today's schedule").
 
 ### 5D — Activity tracking (requested 2026-10-12)
 
@@ -235,8 +236,9 @@ User wants both:
 1. **Study time & progress** — log focus sessions (from the 5C timer) and completed assignments per day: time per course, daily totals, streaks, weekly chart. Stored in Supabase (new table + RLS; re-run the RLS audit).
 2. **App & website usage** — desktop app samples the foreground window every few seconds and totals time per app per day. Websites: without a browser extension only the browser window *title* is visible (e.g. "YouTube – Google Chrome"), so per-site totals are title-based. **Privacy:** usage data stays on this computer (local store, not Supabase) unless the user later opts in; clear on/off switch, pause, and delete-history controls; exclude private/incognito titles.
 
-- **Status:** Not started (planned)
-- **Next step:** Study tracking together with the 5C focus timer; app usage after that (desktop only).
+- **Status:** In progress — study tracking built (2026-10-12); app usage not started
+- **Study tracking (built):** migration `005_focus_sessions.sql` (run 2026-10-12) — `focus_sessions` (RLS own rows; select/insert/delete only; client-generated id prevents double logging) + `assignments.completed_at` maintained by trigger (backfilled from `updated_at`). `src/lib/focusRepo.js` queues sessions locally and retries when offline. **Progress** view (sidebar): tiles (focus today, streak, last 7 days, completed), focus-per-day bar chart (single series in `--chart-1` #a0582a — validated with the dataviz palette checker; completed counts as a label row, no second axis; hover tooltip; table view), time per course. Automated tests only; user test pending.
+- **Next step:** User test (start a focus session ≥1 min, stop, check Progress); then app & website usage (desktop).
 
 ## Phase 6 — External Integrations
 
@@ -271,6 +273,7 @@ User wants both:
 |------|---------------|-----------|------|
 | 2026-10-12 | 3B marked verified (user-confirmed). Built and deployed Phase 3C Web Push (incl. migration 003 grants fix): migration 002, `send-reminders` Edge Function, shared selection logic, service worker, subscription hook, Settings status row, key setup script, setup doc. VAPID keys generated locally. | Automated (37/37, lint, build) + manual: background push delivered with tab closed | RLS audit, then Phase 4 |
 | 2026-10-12 | Built Phase 5A Quick Panel (overlay; Ctrl+Space). Found pre-existing Dashboard overdue bug (stored status never ages). | Automated (61/61) + visual in Chrome | User walkthrough |
+| 2026-10-12 | 5C focus timer + 5D study tracking (focus_sessions, completed_at trigger, Progress view). Migration 005 run by user. | Automated (94/94) | User tests Focus tab + Progress |
 | 2026-10-12 | Phase 5B steps 1–2: Tauri app shell (verified by user), floating Quick Panel window + global Ctrl+Space + tray (built). Added 5C widgets and 5D activity tracking from user requests (Instagram DMs recorded as not feasible). | Step 1 manual; step 2 automated only | User tests step 2 |
 | 2026-10-12 | Phase 4 (AI) deferred by user — no API billing for now; plan kept. | — | Pick 5B or 6 |
 | 2026-10-12 | Fixed stale overdue status across views (effective status derived from due date) + Dashboard week/tag date math. | Automated (70/70) + Chrome, live data | — |

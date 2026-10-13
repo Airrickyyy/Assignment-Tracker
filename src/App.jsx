@@ -6,6 +6,7 @@ import Dashboard from './components/dashboard/Dashboard'
 import AssignmentsView from './components/assignments/AssignmentsView'
 import CalendarView from './components/calendar/CalendarView'
 import SettingsView from './components/settings/SettingsView'
+import ProgressView from './components/progress/ProgressView'
 import MigrationBanner from './components/migration/MigrationBanner'
 import QuickPanelOverlay from './components/quickpanel/QuickPanelOverlay'
 import './components/migration/MigrationBanner.css'
@@ -18,6 +19,10 @@ import {
 } from './lib/assignmentsRepo'
 import { deriveReminders } from './lib/notifications'
 import { withEffectiveStatus } from './lib/assignmentStatus'
+import { useFocusTimer } from './lib/useFocusTimer'
+import { BREAK_MIN } from './lib/focusTimer'
+import { fetchFocusSessions, flushFocusSessions, logFocusSession } from './lib/focusRepo'
+import { localDateStr, shiftDays } from './lib/quickPanel'
 import { useDesktopNotifications } from './lib/useDesktopNotifications'
 import { usePushSubscription } from './lib/usePushSubscription'
 import { disablePush } from './lib/pushSubscription'
@@ -35,7 +40,7 @@ function deriveStatus(dueDate, currentStatus) {
   return due < today ? 'overdue' : 'pending'
 }
 
-const VIEWS = ['dashboard', 'assignments', 'calendar', 'settings']
+const VIEWS = ['dashboard', 'assignments', 'calendar', 'progress', 'settings']
 
 // A background push notification opens JARVIS at /?view=<name>.
 // Read it once, then strip it so a refresh doesn't keep forcing that view.
@@ -73,6 +78,8 @@ function App() {
   }, [])
 
   async function signOut() {
+    // End any running focus session while it can still be saved to this account.
+    focus.stop()
     // Drop this browser's push subscription while the session can still
     // authorise the delete, so the next account here doesn't get our pushes.
     try {
@@ -337,6 +344,60 @@ function App() {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage)
   }, [])
 
+  // ── Focus timer + study tracking (Phases 5C / 5D) ────────────────────────
+  // Last 35 days of focus sessions: today's total for the Quick Panel and the
+  // Progress view's charts.
+  const [focusSessions, setFocusSessions] = useState([])
+  const [focusError, setFocusError] = useState(null)
+  const refreshFocusSessions = useCallback(() => {
+    if (!sessionUserId) return
+    const since = new Date(shiftDays(localDateStr(new Date()), -34) + 'T00:00:00').toISOString()
+    fetchFocusSessions(since)
+      .then(list => { setFocusSessions(list); setFocusError(null) })
+      .catch(err => setFocusError(err.message))
+  }, [sessionUserId])
+
+  useEffect(() => {
+    if (!sessionUserId) { setFocusSessions([]); return }
+    // Save anything queued while offline, then load.
+    flushFocusSessions(sessionUserId).catch(() => {}).finally(refreshFocusSessions)
+  }, [sessionUserId, refreshFocusSessions])
+
+  const notificationsOn = settings.desktopNotificationsEnabled
+  const focus = useFocusTimer({
+    handleCompletion: Boolean(sessionUserId),
+    logSession: record => {
+      if (!sessionUserId) return
+      logFocusSession(sessionUserId, record).catch(() => {}).finally(refreshFocusSessions)
+    },
+    onPhaseEnd: ({ phase }) => {
+      if (!notificationsOn || !('Notification' in window) || Notification.permission !== 'granted') return
+      try {
+        new Notification(phase === 'focus' ? 'Focus session complete' : 'Break over', {
+          body: phase === 'focus'
+            ? `Nice work. Take a ${BREAK_MIN}-minute break.`
+            : 'Ready for another focus session?',
+          icon: '/favicon.svg',
+          tag: 'jarvis-focus',
+        })
+      } catch {
+        // restricted context
+      }
+    },
+  })
+
+  // Re-check the logged totals when another window (desktop Quick Panel)
+  // finishes or stops a session.
+  useEffect(() => {
+    if (!focus.timer) refreshFocusSessions()
+  }, [focus.timer, refreshFocusSessions])
+
+  const focusToday = useMemo(() => {
+    const today = localDateStr(new Date())
+    const todays = focusSessions.filter(s => localDateStr(new Date(s.startedAt)) === today)
+    return { seconds: todays.reduce((sum, s) => sum + s.durationSeconds, 0), sessions: todays.length }
+  }, [focusSessions, notifTick])
+
   // ── Quick Panel (Phase 5A) ───────────────────────────────────────────────
   const [quickPanelOpen, setQuickPanelOpen] = useState(false)
   const closeQuickPanel = useCallback(() => setQuickPanelOpen(false), [])
@@ -434,6 +495,7 @@ function App() {
       />
     ),
     calendar: <CalendarView assignments={viewAssignments} />,
+    progress: <ProgressView focusSessions={focusSessions} assignments={viewAssignments} error={focusError} />,
     settings:  <SettingsView settings={settings} updateSettings={updateSettings} pushStatus={pushStatus} />,
   }
 
@@ -459,6 +521,9 @@ function App() {
         onToggle={toggleAssignment}
         onAdd={addAssignment}
         onNavigate={setActiveView}
+        focus={focus}
+        focusToday={focusToday}
+        initialTab={focus.timer ? 'focus' : 'today'}
       />
     </>
   )

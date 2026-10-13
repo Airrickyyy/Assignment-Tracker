@@ -5,6 +5,8 @@ import { withEffectiveStatus } from '../../lib/assignmentStatus'
 import { localDateStr } from '../../lib/quickPanel'
 import { loadSettings } from '../../lib/storage'
 import { hideCurrentWindow, onDesktopEvent, showMainWindow } from '../../lib/desktop'
+import { useFocusTimer } from '../../lib/useFocusTimer'
+import { fetchFocusSessions, logFocusSession } from '../../lib/focusRepo'
 import QuickPanel from './QuickPanel'
 
 /**
@@ -31,8 +33,19 @@ function QuickPanelWindow() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Same timer as the main window (shared storage). The main window owns
+  // completion; stopping early here logs the session directly.
+  const [focusToday, setFocusToday] = useState(null)
+  const focus = useFocusTimer({
+    logSession: record => { if (userId) logFocusSession(userId, record).catch(() => {}) },
+  })
+
   const refresh = useCallback(async () => {
     if (!userId) return
+    const startOfToday = new Date(localDateStr(new Date()) + 'T00:00:00').toISOString()
+    fetchFocusSessions(startOfToday)
+      .then(list => setFocusToday({ seconds: list.reduce((n, s) => n + s.durationSeconds, 0), sessions: list.length }))
+      .catch(() => {})
     try {
       setAssignments(await fetchAssignments())
       setError(null)
@@ -112,6 +125,9 @@ function QuickPanelWindow() {
             onAdd={add}
             onNavigate={openInMain}
             onClose={hideCurrentWindow}
+            focus={focus}
+            focusToday={focusToday}
+            initialTab={focus.timer ? 'focus' : 'today'}
           />
         </>
       ) : (

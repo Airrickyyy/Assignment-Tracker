@@ -2,7 +2,7 @@
 // Payloads come from the send-reminders Edge Function:
 //   { title, body, tag, view }
 
-const VIEWS = ['dashboard', 'assignments', 'calendar', 'settings']
+const VIEWS = ['dashboard', 'assignments', 'calendar', 'progress', 'settings']
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()))

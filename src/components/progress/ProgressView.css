@@ -1,0 +1,174 @@
+/* Progress view (Phase 5D). Single-series charts in --chart-1; text stays in
+   text tokens; grid and axes recessive. */
+
+.progress-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pg-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .pg-grid { grid-template-columns: 1fr; }
+}
+
+.pg-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.pg-empty p,
+.pg-muted {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.pg-empty kbd {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+/* ── Focus-by-day bar chart ───────────────────────────────────────────────── */
+.pg-chart { position: relative; }
+
+.pg-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pg-gridline { stroke: var(--border-subtle); stroke-width: 1; }
+
+.pg-axis-label {
+  font-size: 11px;
+  fill: var(--text-muted);
+  font-family: inherit;
+}
+
+.pg-bar {
+  fill: var(--chart-1);
+  transition: opacity 0.12s ease;
+}
+
+.pg-chart:hover .pg-bar:not(.is-hover) { opacity: 0.55; }
+
+.pg-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text-secondary);
+  font-family: inherit;
+}
+
+.pg-hit { fill: transparent; cursor: default; }
+
+.pg-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-top: 6px;
+}
+
+.pg-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pg-day-name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pg-day.is-today .pg-day-name { color: var(--text); font-weight: 600; }
+
+.pg-day-done {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--card);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 16px rgba(30, 18, 10, 0.2);
+}
+
+.pg-tooltip strong { font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-bar { transition: none; }
+}
+
+/* ── Table view ───────────────────────────────────────────────────────────── */
+.pg-table { margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
+.pg-table summary { cursor: pointer; color: var(--accent-bright); font-weight: 500; }
+.pg-table table { width: 100%; margin-top: 8px; border-collapse: collapse; }
+.pg-table th, .pg-table td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border-subtle); }
+.pg-table thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.pg-table tbody th { font-weight: 500; color: var(--text); }
+
+/* ── By-course bars ───────────────────────────────────────────────────────── */
+.pg-courses { display: flex; flex-direction: column; gap: 12px; }
+
+.pg-course {
+  display: grid;
+  grid-template-columns: minmax(70px, 120px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.pg-course-name {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pg-course-name.is-muted { color: var(--text-muted); font-style: italic; }
+
+.pg-course-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+
+.pg-course-bar {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 999px;
+  background: var(--chart-1);
+}
+
+.pg-course-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}

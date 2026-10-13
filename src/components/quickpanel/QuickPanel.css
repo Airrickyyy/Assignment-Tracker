@@ -297,6 +297,64 @@
   .qp-ring-fill, .qp-tile { transition: none; }
 }
 
+/* ── Focus timer ──────────────────────────────────────────────────────────── */
+.qp-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qp-focus--active {
+  align-items: center;
+  padding-top: 4px;
+}
+
+.qp-focus--active .qp-ring {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.qp-focus--active .qp-ring-value { font-size: 15px; letter-spacing: 0.02em; }
+
+.qp-focus-presets,
+.qp-focus-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.qp-chip {
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.qp-chip:hover { border-color: var(--accent-dim); color: var(--text); }
+
+.qp-chip.is-active {
+  background: var(--accent-glow-strong);
+  border-color: var(--accent-dim);
+  color: var(--accent-bright);
+  font-weight: 600;
+}
+
+.qp-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.qp-focus-start { align-self: flex-start; }
+
+.qp-focus-hint,
+.qp-focus-today {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.qp-focus-today strong { color: var(--text); font-weight: 600; }
+
 /* ── Quick add ────────────────────────────────────────────────────────────── */
 .qp-add {
   display: grid;

@@ -30,6 +30,10 @@
   --danger: #b03838;
   --danger-dim: rgba(176, 56, 56, 0.12);
 
+  /* Charts — single-series data colour (validated: chroma ≥ 0.1,
+     ≥ 3:1 on --card; dataviz validate_palette.js) */
+  --chart-1: #a0582a;
+
   /* Priority */
   --priority-high: #b03838;
   --priority-medium: #b8750d;

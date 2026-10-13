@@ -31,6 +31,18 @@ const NAV_ITEMS = [
     ),
   },
   {
+    id: 'progress',
+    label: 'Progress',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16" aria-hidden="true">
+        <path d="M3 17h14" strokeLinecap="round" />
+        <rect x="4.5" y="10" width="2.5" height="5" rx="1" />
+        <rect x="8.75" y="6" width="2.5" height="9" rx="1" />
+        <rect x="13" y="3" width="2.5" height="12" rx="1" />
+      </svg>
+    ),
+  },
+  {
     id: 'settings',
     label: 'Settings',
     icon: (

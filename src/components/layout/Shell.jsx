@@ -6,6 +6,7 @@ const VIEW_TITLES = {
   dashboard: 'Dashboard',
   assignments: 'Assignments',
   calendar: 'Calendar',
+  progress: 'Progress',
   settings: 'Settings',
 }
 
