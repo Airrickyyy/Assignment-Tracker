@@ -369,3 +369,37 @@
   .qp-add { grid-template-columns: 1fr 1fr; }
   .qp-add-btn { grid-column: 1 / -1; }
 }
+
+/* ── Desktop window host (QuickPanelWindow) ───────────────────────────────── */
+/* The Tauri "quickpanel" window is transparent; only the card is visible. */
+html.qp-window,
+html.qp-window body,
+html.qp-window #root {
+  background: transparent;
+}
+
+.qp-window-frame {
+  height: 100vh;
+  padding: 10px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qp-window-frame > .qp { flex: 0 1 auto; max-height: 100%; }
+
+.qp-window-error {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--danger-dim);
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.qp-signed-out {
+  align-items: center;
+  gap: 14px;
+  padding: 28px 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}

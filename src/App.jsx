@@ -21,6 +21,8 @@ import { withEffectiveStatus } from './lib/assignmentStatus'
 import { useDesktopNotifications } from './lib/useDesktopNotifications'
 import { usePushSubscription } from './lib/usePushSubscription'
 import { disablePush } from './lib/pushSubscription'
+import { isDesktopApp } from './lib/platform'
+import { onDesktopEvent, toggleQuickPanelWindow } from './lib/desktop'
 import { fetchPreferences, upsertPreferences } from './lib/preferencesRepo'
 import { loadAssignments, loadSettings, saveSettings, DEFAULT_SETTINGS } from './lib/storage'
 import { sampleSchedule } from './data/sampleData'
@@ -340,7 +342,15 @@ function App() {
   const closeQuickPanel = useCallback(() => setQuickPanelOpen(false), [])
   const signedIn = Boolean(session) && !isRecovery
 
-  // Ctrl+Space toggles the panel from anywhere in the app.
+  // In the desktop app the panel is its own always-on-top window (Phase 5B);
+  // in a browser it's an overlay inside this page.
+  const openQuickPanel = useCallback(() => {
+    if (isDesktopApp) toggleQuickPanelWindow()
+    else setQuickPanelOpen(open => !open)
+  }, [])
+
+  // Ctrl+Space toggles the panel from anywhere in the app. On desktop the
+  // shell also registers it system-wide; this is the fallback if that failed.
   useEffect(() => {
     if (!signedIn) {
       setQuickPanelOpen(false)
@@ -349,12 +359,28 @@ function App() {
     function onKeyDown(e) {
       if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'Space') {
         e.preventDefault()
-        setQuickPanelOpen(open => !open)
+        openQuickPanel()
       }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [signedIn])
+  }, [signedIn, openQuickPanel])
+
+  // Desktop: the panel window asks to show a view here ("Open in Assignments").
+  useEffect(() => onDesktopEvent('jarvis:navigate', view => {
+    if (VIEWS.includes(view)) setActiveView(view)
+  }), [])
+
+  // Desktop: pick up changes made in the Quick Panel window when this window
+  // regains focus.
+  useEffect(() => {
+    if (!isDesktopApp || !sessionUserId) return
+    function onFocus() {
+      fetchAssignments().then(setAssignments).catch(() => {})
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [sessionUserId])
 
   // ── Routing ──────────────────────────────────────────────────────────────
   if (session === undefined) return null
@@ -420,7 +446,7 @@ function App() {
         banner={banner}
         reminders={reminders}
         onNavigate={setActiveView}
-        onOpenQuickPanel={() => setQuickPanelOpen(true)}
+        onOpenQuickPanel={openQuickPanel}
       >
         {views[activeView]}
       </Shell>

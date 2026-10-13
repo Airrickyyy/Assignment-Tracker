@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from '../../lib/storage'
+import { isDesktopApp } from '../../lib/platform'
 import './SettingsView.css'
 
 const PRIORITY_OPTIONS = [
@@ -76,7 +77,7 @@ const PUSH_STATUS = {
   registering:  { label: 'Connecting…',    tone: 'off'   },
   inactive:     { label: 'Off',            tone: 'off'   },
   unconfigured: { label: 'Not configured', tone: 'warn'  },
-  unsupported:  { label: 'Not supported',  tone: 'warn'  },
+  unsupported:  { label: isDesktopApp ? 'Browser only' : 'Not supported', tone: 'warn' },
   error:        { label: 'Error',          tone: 'error' },
 }
 

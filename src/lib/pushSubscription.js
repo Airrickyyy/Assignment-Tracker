@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { isDesktopApp } from './platform'
 
 // Public half of the VAPID key pair — safe to ship to the browser.
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
@@ -9,6 +10,9 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
  * 'available'    — background reminders can be enabled
  */
 export function getPushSupport() {
+  // Browser Web Push has no push service inside the desktop app's WebView;
+  // the desktop app delivers reminders natively instead (Phase 5B).
+  if (isDesktopApp) return 'unsupported'
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return 'unsupported'
   if (typeof window === 'undefined' || !('PushManager' in window)) return 'unsupported'
   if (!VAPID_PUBLIC_KEY) return 'unconfigured'
