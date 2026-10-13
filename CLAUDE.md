@@ -55,7 +55,7 @@ Prioritize reliability, good architecture, polished UI/UX and genuinely useful f
 
 ## Current status
 
-See `docs/ROADMAP.md` (status per phase + Immediate priority). As of 2026-10-12: Phases 3B (browser notifications) and 3C (background Web Push) are verified; next up is the RLS audit, then Phase 5A Quick Panel (open decision: overlay vs. replacing the Dashboard).
+See `docs/ROADMAP.md` (status per phase + Immediate priority). As of 2026-10-12: 2A (RLS audit), 3B and 3C verified; 5A Quick Panel built (awaiting user walkthrough). **Phase 4 (AI) is deferred by the user** — no API billing for now; don't start it unless asked. Next candidates: 5B desktop app or Phase 6 Brightspace calendar feed.
 
 ## Notifications reference
 

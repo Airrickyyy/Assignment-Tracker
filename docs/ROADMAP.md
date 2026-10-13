@@ -161,8 +161,10 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 **Engineering requirements:** controlled, explicit interfaces to authorized data · auth and data isolation enforced · no API keys in frontend · confirmation for consequential actions · distinguish verified data from AI suggestions · **not** a generic chatbot disconnected from the app.
 
-- **Status:** Not started
-- **Next step:** Begin once Phases 2–3B are manually verified.
+- **Status:** Deferred — on hold by user decision (2026-10-12). Not removed; keep this plan intact.
+- **Why deferred:** Requires a separate pay-as-you-go Anthropic API account (a Claude Pro/Max subscription can't power an app). The user doesn't want API billing for now. Nothing was built.
+- **Notes for when it resumes:** API key stays server-side (Supabase Edge Function secret, never in the frontend); set a monthly spend cap in the Console. Rough cost estimate (2026-10-12, ~3K tokens in / short answer): Opus 5.5 ≈ 2¢/question, Sonnet 5.5 ≈ 1¢, Haiku 5.5 ≈ 0.05¢. Open choices: model; chat as a JARVIS page, a Quick Panel tab, or both.
+- **Next step:** Only when the user says to resume.
 
 ## Phase 5 — Desktop Experience
 
@@ -205,8 +207,36 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 
 **Important:** browser notifications, Tauri desktop notifications and background-service reminders are different capabilities — implement and test each separately.
 
-- **Status:** Not started
-- **Next step:** Confirm the desktop architecture choice against the existing app's constraints.
+- **Status:** In progress — step 1 verified, step 2 built (awaiting user test), step 3 not started
+- **Steps:**
+  1. **App shell** — Tauri v2 app (`src-tauri/`), id `com.jarvis.assistant`, NSIS installer target, JARVIS icon (`src-tauri/app-icon.svg` → `npx tauri icon`). Email+password login works in the app (own session, separate from the browser). Web Push reports "Browser only" in the app (`src/lib/platform.js`). **Verified 2026-10-12 (user):** signed in, assignments load, in-window Ctrl+Space panel works.
+  2. **Floating Quick Panel + tray** — hidden `quickpanel` window (frameless, transparent, always-on-top, no taskbar entry) rendered by `QuickPanelWindow.jsx`; global Ctrl+Space (`tauri-plugin-global-shortcut`) toggles it at top-center; tray menu Open / Quick Panel / Quit; closing the main window hides to tray; main window refetches on focus and handles `jarvis:navigate`. **Built 2026-10-12** (cargo build clean; lint/tests/build pass). Not yet run by the user. Known limits: no auto-hide on blur (native date/select popups would trigger it); Ctrl+Space can be taken by another program (logged, tray still works).
+  3. **Native notifications + start with Windows** — not started.
+- **Dev setup (this machine):** Rust 1.99 (rustup, MSVC) + VS 2022 Build Tools (C++). Rust build output lives outside OneDrive via gitignored `src-tauri/.cargo/config.toml` → `%LOCALAPPDATA%\jarvis-build\cargo-target`. Run with `npm run desktop:dev` from a fresh terminal. The machine is often low on RAM (~2–3 GB free); Claude Code's background launches have been stopped by memory pressure, so the user runs the app themselves.
+- **Next step:** User tests step 2 (tray, global Ctrl+Space from another app, panel edits reach the main window, close-to-tray).
+
+### 5C — Quick Panel widgets (requested 2026-10-12)
+
+User asked for more widgets after a desktop-customisation reel ("Hitodama"). Requested:
+
+- **Focus timer** — Pomodoro-style; start per assignment/course; each session is logged for 5D study tracking. Feasible.
+- **Today's schedule** — today's classes/events with now/next. **Blocker:** the schedule is still hard-coded sample data (`src/data/sampleData.js`, `TodaySchedule`) — needs a real, editable, cloud-saved schedule (new table + RLS + UI) first.
+- **App times (screen time)** — today's top apps and time; shows 5D app-usage data. Desktop only.
+- **Notifications feed** — mirror recent Windows notifications in the panel. **Research needed:** Windows' notification-listener API requires package identity (MSIX); the current NSIS build has none.
+- **Instagram messages** — **not feasible as asked:** no API for personal-account DMs (Graph API messaging is business/creator accounts with Meta review); scraping or logging in as the user breaks Instagram's terms and risks the account. Only realistic route: Instagram notifications via the notifications feed above, if that research succeeds.
+
+- **Status:** Not started (planned)
+- **Next step:** After 5B step 2 is verified — focus timer first (pairs with 5D study tracking).
+
+### 5D — Activity tracking (requested 2026-10-12)
+
+User wants both:
+
+1. **Study time & progress** — log focus sessions (from the 5C timer) and completed assignments per day: time per course, daily totals, streaks, weekly chart. Stored in Supabase (new table + RLS; re-run the RLS audit).
+2. **App & website usage** — desktop app samples the foreground window every few seconds and totals time per app per day. Websites: without a browser extension only the browser window *title* is visible (e.g. "YouTube – Google Chrome"), so per-site totals are title-based. **Privacy:** usage data stays on this computer (local store, not Supabase) unless the user later opts in; clear on/off switch, pause, and delete-history controls; exclude private/incognito titles.
+
+- **Status:** Not started (planned)
+- **Next step:** Study tracking together with the 5C focus timer; app usage after that (desktop only).
 
 ## Phase 6 — External Integrations
 
@@ -229,8 +259,11 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 ## Immediate priority
 
 1. Phase 5A Quick Panel — user walkthrough.
-2. Phase 4 (AI assistant) scoping.
-3. Remaining 3C spot-checks (see 3C Outstanding).
+2. Phase 5B step 2 — user test (tray, global Ctrl+Space, close-to-tray).
+3. Then 5C focus timer + 5D study tracking; then real editable schedule (unblocks "Today's schedule"); then 5D app usage + "app times" widget; 5B step 3 (native notifications) fits in between as needed.
+4. Later: Phase 6 Brightspace via calendar feed (Carleton has no student API access; calendar feed route confirmed on Carleton's student guide).
+5. Remaining 3C spot-checks (see 3C Outstanding).
+- Phase 4 (AI) is **deferred** by user decision — don't start it unless asked.
 
 ## Session log
 
@@ -238,6 +271,8 @@ Work can overlap (e.g. browser notifications before desktop; integration researc
 |------|---------------|-----------|------|
 | 2026-10-12 | 3B marked verified (user-confirmed). Built and deployed Phase 3C Web Push (incl. migration 003 grants fix): migration 002, `send-reminders` Edge Function, shared selection logic, service worker, subscription hook, Settings status row, key setup script, setup doc. VAPID keys generated locally. | Automated (37/37, lint, build) + manual: background push delivered with tab closed | RLS audit, then Phase 4 |
 | 2026-10-12 | Built Phase 5A Quick Panel (overlay; Ctrl+Space). Found pre-existing Dashboard overdue bug (stored status never ages). | Automated (61/61) + visual in Chrome | User walkthrough |
+| 2026-10-12 | Phase 5B steps 1–2: Tauri app shell (verified by user), floating Quick Panel window + global Ctrl+Space + tray (built). Added 5C widgets and 5D activity tracking from user requests (Instagram DMs recorded as not feasible). | Step 1 manual; step 2 automated only | User tests step 2 |
+| 2026-10-12 | Phase 4 (AI) deferred by user — no API billing for now; plan kept. | — | Pick 5B or 6 |
 | 2026-10-12 | Fixed stale overdue status across views (effective status derived from due date) + Dashboard week/tag date math. | Automated (70/70) + Chrome, live data | — |
 | 2026-10-12 | RLS audit of live DB: all tables RLS-on and owner-scoped; revoked unused TRUNCATE/TRIGGER/REFERENCES from anon/authenticated (migration 004). 3C dedup confirmed (second run sent 0). | Manual (SQL audit) | Phase 5A Quick Panel |
 | 2026-10-12 | Planned Phase 5A Quick Panel from user's desktop-dashboard screenshots; split Phase 5 into 5A (in-app panel) and 5B (Windows app + overlay). | — | Decide overlay vs. Dashboard |
